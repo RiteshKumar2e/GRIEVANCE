@@ -49,6 +49,9 @@ logs/
 
 # Local databases & uploads
 *.db
+*.db-wal
+*.db-shm
+*.db-journal
 *.sqlite
 *.sqlite3
 backend/uploads/

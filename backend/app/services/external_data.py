@@ -447,6 +447,9 @@ def bbmp_summary(db: Session) -> dict[str, Any] | None:
         "zones": top(R.zone, 16),
         "wards": top(R.ward, 15),
         "ratings": sorted(top(R.citizen_rating, 6, R.citizen_rating.is_not(None)), key=lambda x: str(x["name"])),
+        # Full distinct lists (small) so the record explorer can resolve search terms without scanning rows.
+        "all_sub_categories": sorted(v for (v,) in db.execute(select(R.sub_category).where(R.dataset_id == ds.id).distinct()) if v),
+        "all_wards": sorted(v for (v,) in db.execute(select(R.ward).where(R.dataset_id == ds.id).distinct()) if v),
     }
     result["_imported_at"] = str(ds.imported_at)
     ds.quality = {**(ds.quality or {}), "summary": result}  # persisted: computed once per import

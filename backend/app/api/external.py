@@ -62,13 +62,17 @@ def bbmp_records(
     category: str | None = None,
     ward: str | None = None,
     status: str | None = None,
+    in_remarks: bool = Query(default=False, description="also search staff remarks (full scan, slower)"),
     page: int = Query(default=1, ge=1, le=1000),
     size: int = Query(default=25, ge=5, le=100),
     _: User = Depends(require_officer),
     db: Session = Depends(get_db),
 ):
     R = ExternalGrievanceRecord
-    stmt = select(R).join(ExternalDataset, ExternalDataset.id == R.dataset_id).where(ExternalDataset.key == "bbmp_sahaaya_vonter")
+    ds_id = db.scalar(select(ExternalDataset.id).where(ExternalDataset.key == "bbmp_sahaaya_vonter"))
+    if ds_id is None:
+        raise HTTPException(404, "BBMP data has not been imported")
+    stmt = select(R).where(R.dataset_id == ds_id)
     if category:
         stmt = stmt.where(R.category == category)
     if ward:
@@ -78,8 +82,18 @@ def bbmp_records(
     if q and q.strip().isdigit():
         stmt = stmt.where(R.source_record_id == q.strip())  # exact, uses the (dataset_id, source_record_id) index
     elif q:
-        like = f"%{q.strip()}%"
-        stmt = stmt.where(or_(R.sub_category.ilike(like), R.staff_remarks.ilike(like), R.ward.ilike(like)))
+        # Resolve the term against the small distinct lists first, then filter with indexed IN (...) lookups.
+        term = q.strip().lower()
+        subs = [v for v in _distinct(db, ds_id, "sub_category") if term in v.lower()]
+        wards = [v for v in _distinct(db, ds_id, "ward") if term in v.lower()]
+        conds = []
+        if subs:
+            conds.append(R.sub_category.in_(subs))
+        if wards:
+            conds.append(R.ward.in_(wards))
+        if in_remarks:
+            conds.append(R.staff_remarks.ilike(f"%{q.strip()}%"))
+        stmt = stmt.where(or_(*conds)) if conds else stmt.where(R.id == -1)
     # Count at most CAP matches so a broad search over 1.2M rows stays fast; walk the filed_at index newest first.
     CAP = 1000
     total = db.scalar(select(func.count()).select_from(stmt.limit(CAP + 1).subquery())) or 0
@@ -98,3 +112,19 @@ def ogd_rows(key: str, limit: int = Query(default=200, le=2000), _: User = Depen
         raise HTTPException(404, "Unknown dataset")
     rows = db.scalars(select(OfficialDatasetRow).where(OfficialDatasetRow.dataset_id == ds.id).limit(limit)).all()
     return {"key": key, "status": ds.status, "columns": ds.columns, "notes": ds.notes, "rows": [r.row for r in rows]}
+
+
+_DISTINCT_CACHE: dict[tuple[int, str], list[str]] = {}
+
+
+def _distinct(db: Session, ds_id: int, column: str) -> list[str]:
+    """Distinct values of an indexed column (cached per dataset): 187 sub-categories, 485 wards."""
+    key = (ds_id, column)
+    if key not in _DISTINCT_CACHE:
+        stored = (ext.bbmp_summary(db) or {}).get({"sub_category": "all_sub_categories", "ward": "all_wards"}[column])
+        if stored:
+            _DISTINCT_CACHE[key] = stored
+            return stored
+        col = getattr(ExternalGrievanceRecord, column)
+        _DISTINCT_CACHE[key] = [v for (v,) in db.execute(select(col).where(ExternalGrievanceRecord.dataset_id == ds_id).distinct()) if v]
+    return _DISTINCT_CACHE[key]

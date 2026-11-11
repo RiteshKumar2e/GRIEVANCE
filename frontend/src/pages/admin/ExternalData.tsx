@@ -75,11 +75,12 @@ const KIND_LABEL: Record<string, string> = {
 export default function ExternalData() {
   const ds = useQuery({ queryKey: ["external", "datasets"], queryFn: () => api<{ items: Dataset[]; ogd: { configured: boolean; requirement?: string }; cpgrams_individual_records: string }>("/external/datasets") });
   const sum = useQuery({ queryKey: ["external", "bbmp", "summary"], queryFn: () => api<Summary>("/external/bbmp/summary"), retry: false });
-  const [filters, setFilters] = useState({ q: "", category: "", status: "", page: 1 });
+  const [filters, setFilters] = useState({ q: "", category: "", status: "", page: 1, inRemarks: false });
   const params = new URLSearchParams({ page: String(filters.page), size: "20" });
   if (filters.q.trim()) params.set("q", filters.q.trim());
   if (filters.category) params.set("category", filters.category);
   if (filters.status) params.set("status", filters.status);
+  if (filters.inRemarks) params.set("in_remarks", "true");
   const recs = useQuery({ queryKey: ["external", "bbmp", "records", params.toString()], queryFn: () => api<{ total: number; total_capped?: boolean; items: RecordRow[] }>(`/external/bbmp/records?${params}`), enabled: !!sum.data });
   const s = sum.data;
 
@@ -197,7 +198,7 @@ export default function ExternalData() {
             Staff names are not imported. Phone numbers, e-mail addresses, long ID numbers and named individuals in remarks are redacted. The source contains no complaint text written by citizens.
           </p>
           <div className="mb-3 grid gap-2 sm:grid-cols-[1.5fr_1fr_1fr]">
-            <Input aria-label="Search records" placeholder="Search sub-category, ward, remarks or ID" value={filters.q} onChange={(e) => setFilters({ ...filters, q: e.target.value, page: 1 })} />
+            <Input aria-label="Search records" placeholder="Search sub-category, ward or complaint ID" value={filters.q} onChange={(e) => setFilters({ ...filters, q: e.target.value, page: 1 })} />
             <Select aria-label="Category" value={filters.category} onChange={(e) => setFilters({ ...filters, category: e.target.value, page: 1 })}>
               <option value="">All categories</option>
               {s.categories.map((c) => <option key={String(c.name)} value={String(c.name)}>{c.name}</option>)}
@@ -207,6 +208,10 @@ export default function ExternalData() {
               {s.statuses.map((c) => <option key={String(c.name)} value={String(c.name)}>{c.name}</option>)}
             </Select>
           </div>
+          <label className="mb-3 flex items-center gap-2 text-[13px] text-ink-soft">
+            <input type="checkbox" className="h-4 w-4 accent-brand-700" checked={filters.inRemarks} onChange={(e) => setFilters({ ...filters, inRemarks: e.target.checked, page: 1 })} />
+            Also search staff remarks (scans every record, can take several seconds)
+          </label>
           {recs.isLoading && <SkeletonRows rows={5} />}
           {recs.isError && <ErrorState error={recs.error} />}
           {recs.data && recs.data.items.length === 0 && <EmptyState title="No records match" />}

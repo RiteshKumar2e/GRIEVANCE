@@ -20,12 +20,18 @@ SessionLocal: sessionmaker[Session] = sessionmaker(autoflush=False, expire_on_co
 
 def _make_engine(url: str) -> Engine:
     if url.startswith("sqlite"):
-        eng = create_engine(url, connect_args={"check_same_thread": False}, future=True)
+        # Pool sized to FastAPI's worker thread pool; WAL lets readers run while a write is in progress.
+        eng = create_engine(url, connect_args={"check_same_thread": False, "timeout": 30}, pool_size=20, max_overflow=20,
+                            pool_timeout=60, future=True)
 
         @event.listens_for(eng, "connect")
-        def _fk_on(dbapi_conn, _):  # pragma: no cover - trivial
+        def _sqlite_pragmas(dbapi_conn, _):  # pragma: no cover - trivial
             cur = dbapi_conn.cursor()
             cur.execute("PRAGMA foreign_keys=ON")
+            if ":memory:" not in url:
+                cur.execute("PRAGMA journal_mode=WAL")
+                cur.execute("PRAGMA synchronous=NORMAL")
+            cur.execute("PRAGMA busy_timeout=30000")
             cur.close()
 
         return eng

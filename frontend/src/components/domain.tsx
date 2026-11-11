@@ -116,8 +116,8 @@ export function Timeline({ items }: { items: HistoryItem[] }) {
 export function SyntheticBanner() {
   return (
     <div className="border-b border-saffron-100 bg-saffron-50 px-4 py-1.5 text-center text-[12px] text-saffron-700">
-      <strong className="font-semibold">Synthetic demo data.</strong> Categories, departments and history are generated for this demonstration and are not official
-      HackFusion datasets. Predictions are demo estimates.
+      <strong className="font-semibold">The agents run on a synthetic Category Master, department directory and grievance history</strong> until the official HackFusion
+      datasets are released, so predictions are demo estimates. Real public BBMP grievance records are shown separately and labelled with their source.
     </div>
   );
 }
