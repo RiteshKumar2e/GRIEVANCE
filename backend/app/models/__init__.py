@@ -1,4 +1,5 @@
 from app.models.core import Department, GrievanceCategory, Officer, User
+from app.models.external import ExternalDataset, ExternalGrievanceRecord, OfficialDatasetRow
 from app.models.grievance import (
     Assignment,
     DuplicateGroup,
@@ -25,5 +26,5 @@ __all__ = [
     "AgentRun", "AgentTrace", "Assignment", "AuditEvent", "DatasetImport", "Department",
     "DuplicateGroup", "DuplicateGroupMember", "Grievance", "GrievanceCategory", "IntakeDraft",
     "Notification", "Officer", "PageView", "OfficerNote", "RetrievedPrecedent", "SlaRecord", "StatusHistory",
-    "User", "Webhook", "WebhookDelivery",
+    "User", "Webhook", "WebhookDelivery", "ExternalDataset", "ExternalGrievanceRecord", "OfficialDatasetRow",
 ]

@@ -161,6 +161,7 @@ const NAV: Record<string, NavItem[]> = {
     { to: "/admin/categories", label: "Category master" },
     { to: "/admin/departments", label: "Departments" },
     { to: "/admin/datasets", label: "Datasets" },
+    { to: "/admin/public-data", label: "Public data" },
     { to: "/admin/webhooks", label: "Webhooks" },
     { to: "/admin/audit", label: "Audit log" },
     { to: "/admin/observability", label: "Observability" },

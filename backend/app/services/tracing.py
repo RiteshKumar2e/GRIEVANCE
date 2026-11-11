@@ -5,6 +5,7 @@ Traces store structured decisions, never raw chain-of-thought, and inputs are PI
 from __future__ import annotations
 
 import base64
+import re
 import logging
 import secrets
 import time
@@ -16,7 +17,7 @@ import httpx
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
-from app.core.privacy import redact
+from app.core.privacy import redact, redact_text
 from app.core.time import utcnow
 from app.models import AgentRun, AgentTrace
 
@@ -73,15 +74,32 @@ def ensure_share_token(trace: AgentTrace) -> str:
     return trace.share_token
 
 
+# Agents whose reasoning is derived from the complaint text itself (keywords, place names, model rationale).
+# Their structured decision fields are shared publicly; their free-text reasoning is not.
+_TEXT_DERIVED_AGENTS = {"intake", "intake_dialogue"}
+_LOCATION_LINE = re.compile(r"^\s*(Location|Provisional category .* location)", re.IGNORECASE)
+
+
+def _public_reasoning(agent: str, lines: Any) -> list[str] | None:
+    if agent in _TEXT_DERIVED_AGENTS or not isinstance(lines, list):
+        return None
+    return [redact_text(str(line)) for line in lines if line and not _LOCATION_LINE.match(str(line))]
+
+
 def public_view(trace: AgentTrace) -> dict[str, Any]:
-    """Shareable representation: decisions and references only, no complaint text or identities."""
+    """Shareable representation: structured decisions and references only. Complaint text, place names,
+    identities and model rationale are excluded; every remaining string is PII-redacted again."""
     steps = []
     for r in trace.runs:
         out = r.output or {}
+        decision = {k: v for k, v in out.items() if k in PUBLIC_OUTPUT_KEYS and k != "reasoning"}
+        reasoning = _public_reasoning(r.agent, out.get("reasoning"))
+        if reasoning:
+            decision["reasoning"] = reasoning
         steps.append({
             "agent": r.agent, "status": r.status, "provider": r.provider, "model": r.model,
             "confidence": r.confidence, "duration_ms": r.duration_ms,
-            "decision": {k: v for k, v in out.items() if k in PUBLIC_OUTPUT_KEYS},
+            "decision": redact(decision),
             "references": r.references or [],
             "error": "error" if r.error else None,
         })

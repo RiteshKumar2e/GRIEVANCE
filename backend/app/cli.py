@@ -43,6 +43,10 @@ def main(argv: list[str] | None = None) -> None:
     sub.add_parser("sla-scan")
     sub.add_parser("auto-close")
     sub.add_parser("reembed")
+    ext = sub.add_parser("external", help="external public datasets (BBMP, data.gov.in)")
+    ext.add_argument("action", choices=["fetch", "import", "verify", "fetch-ogd", "status"])
+    ext.add_argument("--limit", type=int, default=None, help="import only the first N rows")
+    ext.add_argument("--replace", action="store_true", help="delete previously imported records of this dataset first")
     args = p.parse_args(argv)
 
     get_engine()
@@ -75,6 +79,35 @@ def main(argv: list[str] | None = None) -> None:
             from app.agents.orchestrator import auto_close
 
             print(json.dumps(auto_close(db), indent=2))
+        elif args.cmd == "external":
+            from app.core.config import get_settings
+            from app.services import external_data as ext
+
+            key = get_settings().data_gov_in_api_key
+            if args.action == "fetch":
+                for k in ("bbmp_sahaaya_vonter", "bbmp_opencity_2025"):
+                    path = ext.download(k)
+                    print(f"downloaded {path.name}: {path.stat().st_size} bytes, sha256 {ext.sha256_of(path)}")
+                ext.register_ogd_placeholders(db, key)
+                print(json.dumps(ext.ogd_status(key), indent=2))
+            elif args.action == "import":
+                print(json.dumps(ext.import_bbmp(db, limit=args.limit, replace=args.replace), indent=2, default=str))
+                print(json.dumps(ext.verify_against_opencity(db), indent=2, default=str))
+                ext.register_ogd_placeholders(db, key)
+            elif args.action == "verify":
+                print(json.dumps(ext.verify_against_opencity(db), indent=2, default=str))
+            elif args.action == "fetch-ogd":
+                if not key:
+                    print(json.dumps(ext.ogd_status(key), indent=2))
+                else:
+                    print(json.dumps(ext.fetch_ogd(db, key), indent=2, default=str))
+            else:
+                from sqlalchemy import select as _select
+
+                from app.models import ExternalDataset
+
+                for ds in db.scalars(_select(ExternalDataset)):
+                    print(f"{ds.key:42s} {ds.status:18s} imported={ds.rows_imported}")
         elif args.cmd == "reembed":
             from app.services.importer import reembed_all
 

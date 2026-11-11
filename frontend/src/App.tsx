@@ -29,6 +29,7 @@ const AdminDepartments = lazy(() => import("./pages/admin/AdminDepartments"));
 const AdminDatasets = lazy(() => import("./pages/admin/AdminDatasets"));
 const AdminWebhooks = lazy(() => import("./pages/admin/AdminWebhooks"));
 const AdminAudit = lazy(() => import("./pages/admin/AdminAudit"));
+const ExternalData = lazy(() => import("./pages/admin/ExternalData"));
 const Observability = lazy(() => import("./pages/admin/Observability"));
 
 /** Title + description per route. Private pages are marked noindex. */
@@ -55,6 +56,7 @@ const META: [string, string, string?, boolean?][] = [
   ["/admin/datasets", "Datasets", undefined, true],
   ["/admin/webhooks", "Webhooks", undefined, true],
   ["/admin/audit", "Audit log", undefined, true],
+  ["/admin/public-data", "Public data", undefined, true],
   ["/admin/observability", "Observability", undefined, true],
   ["/admin/observability/:traceId", "Trace", undefined, true],
 ];
@@ -110,6 +112,7 @@ export default function App() {
           <Route path="/admin/datasets" element={<Protected roles={["admin"]}><AdminDatasets /></Protected>} />
           <Route path="/admin/webhooks" element={<Protected roles={["admin"]}><AdminWebhooks /></Protected>} />
           <Route path="/admin/audit" element={<Protected roles={["admin"]}><AdminAudit /></Protected>} />
+          <Route path="/admin/public-data" element={<Protected roles={["admin"]}><ExternalData /></Protected>} />
           <Route path="/admin/observability" element={<Protected roles={["admin"]}><Observability /></Protected>} />
           <Route path="/admin/observability/:traceId" element={<Protected roles={["admin"]}><Observability /></Protected>} />
 

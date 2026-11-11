@@ -61,6 +61,8 @@ class Settings(BaseSettings):
     max_drafts_per_day: int = 60
     enforce_https: bool = False  # set true behind a TLS-terminating proxy in production
 
+    data_gov_in_api_key: str = ""  # personal key from data.gov.in (optional)
+
     upload_dir: str = str(BACKEND_DIR / "uploads")
     max_upload_mb: int = 15
 

@@ -54,6 +54,8 @@ logs/
 backend/uploads/
 backend/data/raw/*
 !backend/data/raw/.gitkeep
+# External datasets: original downloads are large and re-fetchable (see backend/data/external/PROVENANCE.md)
+backend/data/external/*/raw/
 pgdata/
 
 # Model caches
