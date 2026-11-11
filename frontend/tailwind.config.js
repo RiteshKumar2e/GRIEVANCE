@@ -11,8 +11,9 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['"Manrope"', '"Noto Sans Devanagari"', "system-ui", "-apple-system", "Segoe UI", "sans-serif"],
-        display: ['"Manrope"', '"Noto Sans Devanagari"', "system-ui", "sans-serif"],
+        // Noto Sans + Noto Sans Devanagari: one type family drawn to pair Latin and Devanagari text.
+        sans: ['"Noto Sans"', '"Noto Sans Devanagari"', "system-ui", "-apple-system", "Segoe UI", "sans-serif"],
+        display: ['"Noto Sans"', '"Noto Sans Devanagari"', "system-ui", "sans-serif"],
         mono: ['"IBM Plex Mono"', "ui-monospace", "SFMono-Regular", "Consolas", "monospace"],
       },
       colors: {
@@ -25,7 +26,7 @@ export default {
         // Caution colour for the SYNTHETIC-data notice.
         saffron: { 50: "#F8EEDF", 100: "#EED8B6", 500: "#B9701D", 600: "#985B15", 700: "#7A4810" },
         ink: { DEFAULT: "#101D2B", soft: "#3A4655", muted: "#5B6573" },
-        stone: { DEFAULT: "#E8E5DC", dark: "#C7C2B5" },
+        stone: { DEFAULT: "#E8E5DC", dark: "#C7C2B5", light: "#F1EFE8" },
         line: "#E8E5DC",
         canvas: "#FAF9F6",
         surface: "#FFFFFE",

@@ -24,50 +24,51 @@ export function SiteFooter({ compact = false }: { compact?: boolean }) {
       </footer>
     );
   }
+  const link =
+    "inline-flex min-h-11 items-center rounded-sm font-medium text-navy underline-offset-[3px] transition-colors duration-150 hover:text-brand-700 hover:underline focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-navy sm:min-h-0 sm:py-1";
   return (
-    <footer className="bg-navy text-[#C9D1DB]">
-      <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:px-6 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
-        <div>
-          <Link to="/" aria-label="GRIEVANCE home" className="inline-block rounded-md bg-canvas px-3 py-2">
-            <img src="/brand/grievance-logo.webp" alt="GRIEVANCE. Speak, Track, Resolve." width={220} height={60} style={{ width: 220, height: "auto" }} />
-          </Link>
-          <p className="mt-3 max-w-xs text-[14px] leading-relaxed">
-            An agentic grievance redressal system built for HackFusion 4.0 (Agentic AI track). This deployment uses synthetic demo data and is not affiliated with any
-            government body.
-          </p>
+    <footer className="border-t border-stone bg-stone-light text-ink-soft">
+      <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+        <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between md:gap-12">
+          <div className="max-w-md">
+            <Link
+              to="/"
+              aria-label="GRIEVANCE home"
+              className="inline-flex items-center gap-2 rounded-sm focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-navy"
+            >
+              <img src="/brand/grievance-emblem.webp" alt="" width={30} height={28} style={{ height: 28, width: "auto" }} />
+              <img src="/brand/grievance-wordmark.webp" alt="GRIEVANCE" width={99} height={15} style={{ height: 15, width: "auto" }} />
+            </Link>
+            <p className="mt-3 text-[14px] leading-relaxed">
+              An agentic grievance redressal system built for HackFusion 4.0. Not affiliated with any government body.
+            </p>
+          </div>
+          <nav aria-label="Footer">
+            <ul className="grid grid-cols-2 gap-x-8 text-[14px] sm:flex sm:flex-wrap sm:gap-x-6 sm:gap-y-2">
+              <li><Link to="/#about" className={link}>About</Link></li>
+              <li><Link to="/help" className={link}>Help</Link></li>
+              <li>
+                {SUPPORT_EMAIL ? (
+                  <a href={`mailto:${SUPPORT_EMAIL}`} className={link}>Contact</a>
+                ) : (
+                  <Link to="/help#contact" className={link}>Contact</Link>
+                )}
+              </li>
+              <li><Link to="/privacy" className={link}>Privacy</Link></li>
+              <li><Link to="/terms" className={link}>Terms</Link></li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => window.dispatchEvent(new Event("grievance:open-consent"))}
+                  className={link}
+                >
+                  Storage preferences
+                </button>
+              </li>
+            </ul>
+          </nav>
         </div>
-        <nav aria-label="Product">
-          <p className="text-[12px] font-bold uppercase tracking-[0.1em] text-white">Product</p>
-          <ul className="mt-3 space-y-2 text-[14px]">
-            <li><a href="/#how" className="hover:text-white hover:underline">How it works</a></li>
-            <li><a href="/#features" className="hover:text-white hover:underline">Features</a></li>
-            <li><a href="/#about" className="hover:text-white hover:underline">About</a></li>
-          </ul>
-        </nav>
-        <nav aria-label="Support">
-          <p className="text-[12px] font-bold uppercase tracking-[0.1em] text-white">Support</p>
-          <ul className="mt-3 space-y-2 text-[14px]">
-            <li><Link to="/help" className="hover:text-white hover:underline">Help and support</Link></li>
-            <li>
-              {SUPPORT_EMAIL ? (
-                <a href={`mailto:${SUPPORT_EMAIL}`} className="hover:text-white hover:underline">Contact: {SUPPORT_EMAIL}</a>
-              ) : (
-                <Link to="/help#contact" className="hover:text-white hover:underline">Contact</Link>
-              )}
-            </li>
-          </ul>
-        </nav>
-        <nav aria-label="Legal">
-          <p className="text-[12px] font-bold uppercase tracking-[0.1em] text-white">Legal</p>
-          <ul className="mt-3 space-y-2 text-[14px]">
-            <li><Link to="/privacy" className="hover:text-white hover:underline">Privacy policy</Link></li>
-            <li><Link to="/terms" className="hover:text-white hover:underline">Terms and conditions</Link></li>
-            <li className="[&_button:hover]:text-white">{storage}</li>
-          </ul>
-        </nav>
-      </div>
-      <div className="border-t border-white/10">
-        <p className="mx-auto max-w-6xl px-4 py-5 text-[12px] sm:px-6">Draft legal pages pending review by the operating authority.</p>
+        <p className="mt-8 border-t border-stone-dark/60 pt-5 text-[12px] text-ink-muted">Draft legal pages pending review by the operating authority.</p>
       </div>
     </footer>
   );

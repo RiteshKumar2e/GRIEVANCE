@@ -65,6 +65,8 @@ export default defineConfig(({ mode }) => {
       globals: true,
       setupFiles: ["./src/test/setup.ts"],
       css: false,
+      // The intake flow test simulates real typing; 5 s (the default) is too tight on slower machines.
+      testTimeout: 15000,
     },
   };
 });

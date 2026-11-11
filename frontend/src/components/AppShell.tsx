@@ -7,7 +7,6 @@ import { useAuth } from "../lib/auth";
 import { fmtDate } from "../lib/format";
 import { LANG_LABEL, useI18n } from "../lib/i18n";
 import type { Lang, Notification, SystemStatus } from "../lib/types";
-import { SyntheticBanner } from "./domain";
 import { IconBell, IconClose, IconMenu, IconSignOut } from "./icons";
 import { SiteFooter } from "./SiteChrome";
 
@@ -171,7 +170,6 @@ const NAV: Record<string, NavItem[]> = {
 export function AppShell({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
   const { t } = useI18n();
-  const status = useSystemStatus();
   const nav = useNavigate();
   const loc = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -192,7 +190,6 @@ export function AppShell({ children }: { children: ReactNode }) {
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-[70] focus:rounded focus:bg-surface focus:px-3 focus:py-2 focus:shadow">
         Skip to content
       </a>
-      {status.data?.synthetic_data_in_use && <SyntheticBanner />}
       <header className="sticky top-0 z-30 border-b border-line bg-canvas/95 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-2 px-4">
           <div className="flex min-w-0 items-center gap-3">
