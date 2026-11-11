@@ -1,356 +1,426 @@
-# GRIEVANCE
+<div align="center">
 
-**An autonomous, agentic, multilingual grievance-redressal ecosystem** — built for HackFusion 4.
+<img src="frontend/public/brand/grievance-logo.png" alt="GRIEVANCE. Speak, Track, Resolve. An Intelligent Grievance Redressal Ecosystem." width="560" />
 
-Citizens report civic problems in **Hindi, Marathi or English**, by typing or speaking. Six cooperating agents
-classify, route, retrieve precedents, link duplicates, predict SLA risk and act through controlled backend APIs, while a
-deterministic policy gate keeps sensitive and uncertain cases under human control. Every automated step is
-audited and traced.
+**Agentic AI for intelligent grievance redressal**<br/>
+HackFusion 4.0 · Agentic AI track
 
-> **Data notice.** The official HackFusion datasets (Category Master, Mock Grievance History, Department Directory)
-> are not yet available. Everything shipped in `backend/data/synthetic/` is **generated SYNTHETIC demo data**. It is
-> labelled `SYNTHETIC` in the database, the UI (banner + badges) and every prediction ("demo estimate"). Replace it
-> through the importer when the official files arrive — no code change needed.
+</div>
+
+GRIEVANCE turns a submit-and-wait complaint portal into a system that behaves like an experienced grievance
+officer. A citizen describes a problem in Marathi, Hindi or English, by text or voice. Six cooperating agents
+turn it into a structured, confirmed grievance, route it to the right department, recall similar past cases,
+link duplicate reports, predict delays before they happen and carry out the backend actions. People stay in
+control wherever the risk or uncertainty is high.
+
+> **Data notice.** The official HackFusion Category Master, Mock Grievance History and Department Directory have
+> not been released. The agents therefore run on clearly labelled **synthetic** versions of those three datasets
+> (generated, not official). Real public grievance data from Bengaluru (BBMP, 1.23 million records) is imported
+> separately as labelled reference data. See [Data and provenance](#data-and-provenance).
 
 ---
 
 ## Contents
-1. [Features](#features) · 2. [Architecture](#architecture) · 3. [Folder structure](#folder-structure) ·
-4. [Prerequisites](#prerequisites) · 5. [Backend setup](#backend-setup) · 6. [Frontend setup](#frontend-setup) ·
-7. [Environment configuration](#environment-configuration) · 8. [Docker setup](#docker-setup) ·
-9. [Database migrations](#database-migrations) · 10. [Dataset import](#dataset-import) · 11. [API documentation](#api-documentation) ·
-12. [Testing](#testing) · 13. [Demo workflow](#demo-workflow) · 14. [Limitations](#known-limitations)
+
+1. [How the problem statement is met](#how-the-problem-statement-is-met)
+2. [Architecture](#architecture)
+3. [Quick start](#quick-start)
+4. [Mock API](#mock-api)
+5. [Observability and the live trace link](#observability-and-the-live-trace-link)
+6. [Data and provenance](#data-and-provenance)
+7. [Security, privacy and responsible AI](#security-privacy-and-responsible-ai)
+8. [Accessibility and inclusion](#accessibility-and-inclusion)
+9. [Testing](#testing)
+10. [Configuration](#configuration)
+11. [Project structure](#project-structure)
+12. [Known limitations](#known-limitations)
 
 ---
 
-## Features
+## How the problem statement is met
 
-### The six agents (`backend/app/agents/`)
-| # | Agent | What it does |
-|---|-------|--------------|
-| 1 | **Multilingual intake** (`intake.py`) | Hindi / Marathi / English text or Whisper-transcribed voice → category, location/ward, urgency, department, summary. Produces a **draft**; nothing is filed until the citizen reviews and confirms. |
-| 2 | **Policy & safety** (`policy.py`) | Deterministic gate driven by the Category Master: department + SLA mapping, sensitive flag, identity hiding, per-category confidence threshold, prompt-injection and sensitive-keyword signals → human review. Defines the only actions the AI may take. |
-| 3 | **RAG precedents** (`rag.py`) | Local multilingual embeddings + pgvector cosine search for top-k resolved grievances, filtered category → department → all, with source IDs and summaries. Evidence only. |
-| 4 | **Duplicate grouping** (`duplicate.py`) | Semantic + geographic + time + category score. Links reports into a group; every grievance keeps its own ID, status, notifications and audit trail. Officers can unlink. |
-| 5 | **Predictive SLA & recurrence** (`predictive.py`) | Breach probability from historical resolution times × department load; at-risk warnings, breach escalation, recurring category×ward hotspots, department bottlenecks, officer workload. |
-| 6 | **Backend actions** (`actions.py`) | Department/officer assignment (least-loaded, ward-aware, sensitive-authorised), status updates, escalation, notifications, signed webhooks, audit events. |
+| Capability required | What GRIEVANCE does | Where |
+|---|---|---|
+| **1. Conversational intake** (text and voice; Marathi, Hindi, English; structured draft) | A chat assistant asks for missing facts (what, where, since when) in the citizen's language, then produces a structured draft: category, department, ward, urgency, SLA and summary. Voice is transcribed by Whisper and shown for editing before it is sent. Nothing is filed until the citizen ticks a confirmation and submits. | `backend/app/agents/conversation.py`, `intake.py` |
+| **2. Safety and policy enforcement** (Category Master is the source of truth; sensitive cases never auto-closed) | A deterministic policy gate reads the Category Master for department, SLA, sensitivity, identity hiding and confidence threshold. Sensitive, low-confidence, prompt-injection or sensitive-keyword cases go to human review. The lifecycle service refuses any attempt by `AI_SYSTEM` to close a sensitive case, and there is no rejection status at all. | `agents/policy.py`, `services/grievances.py` |
+| **3. Case memory (RAG)** | Local multilingual embeddings (`paraphrase-multilingual-MiniLM-L12-v2`) and pgvector cosine search retrieve the most similar resolved cases from the grievance history, widening from category to department to all. Officers see them as evidence with source IDs and similarity. | `agents/rag.py` |
+| **4. Duplicate detection and incident grouping** (semantic, geographic, time; no silent drops) | Score = 0.55 semantic + 0.20 distance + 0.15 time + 0.10 category. Matches are linked into a group; every report keeps its own ID, status, notifications and audit trail. Officers can unlink. Works across languages (a Hindi and an English report of the same overflow linked at semantic 0.82). | `agents/duplicate.py` |
+| **5. Predictive intelligence** (SLA breach and recurrence, before the delay) | Predicts resolution time and breach probability from historical resolution times and current department load, warns at 75% of the SLA or when the risk is high, escalates breaches, and finds recurring category-and-ward hotspots and department bottlenecks. | `agents/predictive.py` |
+| **6. Real-world action** (mock DB updates, department assignment, n8n/Zapier webhooks) | Assigns the department and least-loaded ward officer, updates status, notifies people, and sends HMAC-signed webhooks compatible with n8n and Zapier. A built-in mock receiver lets you demonstrate delivery without external services. | `agents/actions.py`, `services/webhooks.py`, `api/mock.py` |
+| **Observability** (Langfuse live tracing; inspectable reasoning) | Every workflow is traced step by step with model, inputs, outputs, RAG evidence, policy decision, confidence, actions, errors and timing. Each step records a structured decision trail. Traces are exported to Langfuse as public traces, and can also be shared as redacted links from the app. | `services/tracing.py` |
 
-The **orchestrator** (`orchestrator.py`) runs them as traced workflows: `intake_analysis`, `grievance_pipeline`,
-`sla_scan` (also on a background timer) and `auto_close`.
-
-### LLM chain: Groq → Gemini → rules
-`backend/app/llm/client.py` tries **Groq** first, falls back to **Gemini** if Groq fails or returns invalid output,
-and falls back to a **deterministic multilingual rule engine** when neither is configured or both fail. All LLM
-output is schema-validated, cross-checked against the rule classifier and passed through the policy gate — it is
-advisory only. The system is fully functional with no API keys.
-
-### Safety guarantees (enforced in code and covered by tests)
-- Sensitive grievances are **never closed by `AI_SYSTEM`**; categories without auto-close are never auto-closed.
-- Low-confidence classifications go to **human review**; the AI cannot release a case from review.
-- There is **no rejection status** — no automatic (or manual) rejection.
-- The AI makes **no liability determinations**.
-- Every AI action writes an **audit event**: actor `AI_SYSTEM`, provider, model, confidence, timestamp, structured
-  explanation, policy references, action, grievance ID, trace ID.
-- Complaint text is **untrusted input**: delimited in the user turn, never placed in instructions; instruction-like
-  text routes the case to a human.
-
-### Applications
-- **Citizen portal** — landing page, registration/login, AI complaint assistant (text + voice), review & confirmation,
-  grievance ID, tracking with status history, notifications, resolution confirmation with rating, dispute → reopen.
-- **Officer dashboard** — assigned / department / human-review queues with filters, AI summary, policy explanation,
-  confidence vs threshold, similar precedents, linked duplicates, SLA countdown and prediction, escalation, notes,
-  status management, reassignment, audit trail.
-- **Administrator dashboard** — live statistics, trends, department SLA performance, category mix, SLA watchlist,
-  recurrence hotspots, bottlenecks, officer workload, agent activity, Category Master editor, department directory,
-  dataset import, webhooks, audit log.
-- **Observability** — every agent step with provider/model, confidence, retrieved references, policy decision,
-  actions, errors, timing and human-review decisions; **shareable redacted trace links**; optional **Langfuse**
-  export (public traces) when keys are set.
-
-### Security
-JWT auth, role-based access (citizen / officer / admin) plus object-level checks, bcrypt hashing, Pydantic validation,
-rate limiting on auth and intake, identity masking (sensitive cases show "Identity protected"), PII redaction in
-traces and audit explanations, secure error responses with reference IDs, security headers, env-only secrets.
+**Rubric coverage.** Real-world understanding: grounded in 1.23M real BBMP grievances (volume, categories, channels, statuses). Technical quality: 80 automated backend tests and 10 frontend tests, and a PostgreSQL/pgvector stack in Docker. Responsible AI: policy gate, human review, audit log, PII redaction. Accessibility: three languages, voice in and read-aloud out, keyboard and screen-reader support. Observability: Langfuse export and an in-app trace explorer.
 
 ---
 
 ## Architecture
 
-```text
- Browser (React + Vite + TS + Tailwind)
-   │  REST /api/v1  (JWT)
-   ▼
- FastAPI ── routers: auth · meta · citizen · officer · admin · analytics · observability
-   │
-   ├── Orchestrator ──► 1 Intake ──► 2 Policy gate ──► 3 RAG ──► 4 Duplicates ──► 5 Predictive SLA ──► 6 Actions
-   │                      │  ▲                                                                           │
-   │                      ▼  │ schema-validated JSON                                                     ▼
-   │            LLM chain: Groq → Gemini → rules            status machine · notifications · webhooks · audit
-   │            Local embeddings (multilingual MiniLM) · Whisper STT
-   │
-   ├── Tracing (DB, always) ──► optional Langfuse export
-   └── SQLAlchemy 2 + Alembic ──► PostgreSQL 16 + pgvector  (SQLite supported for tests / quick dev)
+```mermaid
+flowchart LR
+  subgraph Citizen
+    A[Chat or voice<br/>mr / hi / en]
+  end
+  A -->|draft| I1[1 Conversational intake]
+  I1 -->|citizen confirms| P[2 Policy gate<br/>Category Master]
+  P --> R[3 Case memory<br/>pgvector RAG]
+  R --> D[4 Duplicate grouping]
+  D --> S[5 Predictive SLA]
+  S --> X[6 Actions<br/>assign · notify · webhook]
+  X --> DB[(PostgreSQL + pgvector)]
+  X --> WH[n8n / Zapier]
+  P -.sensitive or uncertain.-> H[Human review queue]
+  subgraph LLM chain
+    G[Groq] -->|fails| GM[Gemini] -->|fails| RU[Deterministic rules]
+  end
+  I1 --- G
+  I1 & P & R & D & S & X -. traced .-> LF[Langfuse + in-app traces]
 ```
 
-Grievance lifecycle: `SUBMITTED → PENDING_REVIEW | ASSIGNED → IN_PROGRESS → RESOLVED → CLOSED`, with
-`RESOLVED/CLOSED → REOPENED` on citizen dispute. All transitions go through `services/grievances.transition()`.
+- **Backend:** FastAPI, SQLAlchemy 2, Alembic, PostgreSQL 16 with pgvector (SQLite supported for quick local runs and tests).
+- **LLM chain:** Groq first, Gemini when Groq fails or returns invalid output, deterministic multilingual rules when neither is available. LLM output is schema-validated, cross-checked against the rules and passed through the policy gate. The system works fully with no keys.
+- **Frontend:** React, Vite, TypeScript, Tailwind; citizen, officer and administrator views.
+
+Grievance lifecycle: `SUBMITTED → PENDING_REVIEW | ASSIGNED → IN_PROGRESS → RESOLVED → CLOSED`, and
+`RESOLVED / CLOSED → REOPENED` when a citizen disputes the fix. Every transition goes through one service that
+enforces the safety rules.
 
 ---
 
-## Folder structure
+## Quick start
 
-```text
-GRIEVANCE/
-├── backend/
-│   ├── app/
-│   │   ├── agents/        six agents + orchestrator
-│   │   ├── api/           REST routers, serializers, access control
-│   │   ├── core/          config, security, deps, errors, privacy, rate limit
-│   │   ├── db/            engine/session, portable vector type
-│   │   ├── llm/           Groq/Gemini client, embeddings, Whisper
-│   │   ├── models/        SQLAlchemy models
-│   │   ├── schemas/       Pydantic request/response models
-│   │   ├── services/      lifecycle, audit, notifications, webhooks, tracing, importer, seed, geo
-│   │   ├── cli.py         init / migrate / import / sla-scan / auto-close / reembed
-│   │   └── main.py        FastAPI app
-│   ├── alembic/           migrations
-│   ├── data/
-│   │   ├── synthetic/     SYNTHETIC demo datasets (CSV)
-│   │   ├── schemas/       importer column maps (JSON)
-│   │   └── raw/           official files go here (git-ignored)
-│   ├── docs/              presentation and supporting docs
-│   ├── scripts/           generate_synthetic_data.py
-│   ├── tests/             pytest suite
-│   ├── .env / .env.example
-│   ├── requirements.txt / requirements-ml.txt
-│   └── Dockerfile
-├── frontend/
-│   ├── src/               pages (public, citizen, officer, admin), components, lib, tests
-│   ├── public/
-│   ├── .env / .env.example
-│   ├── package.json
-│   ├── nginx.conf
-│   └── Dockerfile
-├── .gitignore
-├── docker-compose.yml
-└── README.md
-```
-
----
-
-## Prerequisites
-- **Python 3.10+** (3.11 in Docker)
-- **Node.js 20+** (22 recommended) and npm
-- **Docker Desktop** (for PostgreSQL + pgvector or the full stack)
-- Optional: Groq and/or Gemini API keys; ~1 GB disk for the local embedding + Whisper models
-
----
-
-## Backend setup
+### With Docker (PostgreSQL + pgvector, recommended)
 
 ```bash
-cd backend
-python -m venv .venv                 # or: uv venv .venv
-# Windows: .venv\Scripts\activate     macOS/Linux: source .venv/bin/activate
-pip install -r requirements.txt
-# Optional local models (multilingual embeddings + Whisper voice input):
-pip install -r requirements-ml.txt   # CPU torch: pip install torch --index-url https://download.pytorch.org/whl/cpu
-
-cp .env.example .env                 # then edit; see "Environment configuration"
-docker compose up -d db              # from the repo root, if using PostgreSQL
-python -m app.cli init               # migrate + seed SYNTHETIC data + demo accounts + demo grievances
-uvicorn app.main:app --reload --port 8000
-```
-
-API: <http://localhost:8000/api/v1/docs>. For a zero-dependency start set `DATABASE_URL=sqlite:///./grievance.db`.
-
-Demo accounts (synthetic, development only; password = `DEMO_PASSWORD`, default `Demo@12345`):
-
-| Role | E-mail |
-|------|--------|
-| Citizen | `citizen@example.org`, `citizen2@example.org` |
-| Officer (Water) | `officer.water@example.org` |
-| Officer (Roads) | `officer.roads@example.org` |
-| Officer (Women & Child Safety — sensitive cases) | `officer.safety@example.org` |
-| Administrator | `admin@example.org` |
-
-## Frontend setup
-
-```bash
-cd frontend
-cp .env.example .env                 # VITE_API_BASE_URL=http://localhost:8000/api/v1
-npm install
-npm run dev                          # http://localhost:5173
-```
-
----
-
-## Environment configuration
-
-Each application has its **own** env files; nothing is shared and there is no root `.env`.
-
-**`backend/.env`** (secrets live only here — see `backend/.env.example` for every key)
-
-| Key | Purpose |
-|-----|---------|
-| `DATABASE_URL` | `postgresql+psycopg://…` (pgvector) or `sqlite:///./grievance.db` |
-| `JWT_SECRET`, `JWT_EXPIRE_MINUTES` | Token signing — use a long random value |
-| `CORS_ORIGINS` | Allowed browser origins |
-| `GROQ_API_KEY`, `GROQ_MODEL` | Primary LLM (optional) |
-| `GEMINI_API_KEY`, `GEMINI_MODEL` | Fallback LLM when Groq fails (optional) |
-| `EMBEDDING_PROVIDER`, `EMBEDDING_MODEL` | `auto` / `sentence-transformers` / `hashing` |
-| `STT_PROVIDER`, `WHISPER_MODEL` | Whisper voice input (`auto` / `faster-whisper` / `disabled`) |
-| `DEFAULT_CONFIDENCE_THRESHOLD`, `DUPLICATE_*`, `SLA_*`, `AUTO_CLOSE_AFTER_DAYS` | Policy tuning |
-| `LANGFUSE_HOST`, `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY` | Optional Langfuse export |
-| `WEBHOOK_SIGNING_SECRET` | HMAC key for outgoing webhooks |
-| `SEED_DEMO_USERS`, `DEMO_PASSWORD` | Development seed |
-
-**`frontend/.env`** — public values only: `VITE_API_BASE_URL`, `VITE_APP_NAME`. Never put keys here.
-
-Model names change over time; set `GROQ_MODEL` / `GEMINI_MODEL` to any current model your account offers.
-
----
-
-## Docker setup
-
-Docker runs three containers: **db** (PostgreSQL 16 + pgvector), **backend** (FastAPI; migrates and seeds on start)
-and **frontend** (nginx serving the built app).
-
-```bash
-# from the repo root, with Docker Desktop running and backend/.env present
+cp backend/.env.example backend/.env        # then set JWT_SECRET; optional: GROQ/GEMINI/LANGFUSE keys
 docker compose up --build -d
 ```
 
-**Windows note:** with Docker Compose v5 + Buildx 0.38 on Windows, `compose up --build` can stop with
-`additional privileges requested: pass "--allow=fs.read=frontend\Dockerfile"`. Build the two images directly, then start Compose
-without building:
+On Windows with Docker Compose v5 + Buildx 0.38, `compose up --build` can stop with
+`additional privileges requested: pass "--allow=fs.read=..."`. Build the images directly, then start:
 
 ```bash
 docker build -t grievance-backend ./backend
-docker build -t grievance-frontend --build-arg VITE_API_BASE_URL=http://localhost:8000/api/v1 ./frontend
+docker build -t grievance-frontend ./frontend
 docker compose up -d
 ```
 
 | Service | URL |
-|---------|-----|
-| Web app | <http://localhost:8080> |
-| API docs | <http://localhost:8000/api/v1/docs> |
-| PostgreSQL | `localhost:5432` (grievance / grievance) |
+|---|---|
+| Web app | http://localhost:8080 |
+| API docs (Swagger) | http://localhost:8000/api/v1/docs |
+| PostgreSQL | localhost:5432 (grievance / grievance) |
 
-Useful commands: `docker compose logs -f backend`, `docker compose ps`, `docker compose down` (keep data),
-`docker compose down -v` (also delete the database volume).
-The backend image is built without the large ML models by default (hashing embeddings, no voice). To include them,
-build with `--build-arg INSTALL_ML=true`.
+The backend migrates and seeds the synthetic datasets on start (about a minute the first time). To add the
+real BBMP data: `docker compose exec backend python -m app.cli external fetch` then
+`... external import` (about 6 minutes).
 
----
+### Without Docker
 
-## Database migrations
-Alembic (`backend/alembic/`) works for PostgreSQL and SQLite; on PostgreSQL the migration creates the `vector`
-extension and an HNSW cosine index on `grievances.embedding`.
+**Backend** (Python 3.10+):
 
 ```bash
 cd backend
-python -m app.cli migrate                                # alembic upgrade head
-alembic revision --autogenerate -m "describe change"     # after changing models
+python -m venv .venv && .venv\Scripts\activate          # macOS/Linux: source .venv/bin/activate
+pip install -r requirements.txt
+pip install -r requirements-ml.txt                        # optional: multilingual embeddings + Whisper voice
+cp .env.example .env                                      # DATABASE_URL=sqlite:///./grievance.db works out of the box
+python -m app.cli init                                    # migrate + synthetic datasets + demo accounts
+python -m app.cli external fetch && python -m app.cli external import   # optional: real BBMP data
+uvicorn app.main:app --reload --port 8000
 ```
 
-Tables: users, departments, officers, grievance_categories, grievances, assignments, status_history, officer_notes,
-notifications, duplicate_groups, duplicate_group_members, retrieved_precedents, sla_records, audit_events,
-agent_traces, agent_runs, webhooks, webhook_deliveries, dataset_imports, intake_drafts.
+**Frontend** (Node 20+):
+
+```bash
+cd frontend
+cp .env.example .env
+npm install
+npm run dev                                               # http://localhost:5173
+```
+
+**Demo accounts** (synthetic, development only; password `Demo@12345`):
+
+| Role | E-mail |
+|---|---|
+| Citizen | `citizen@example.org` |
+| Officer, Water Supply | `officer.water@example.org` |
+| Officer, Women and Child Safety (sensitive cases) | `officer.safety@example.org` |
+| Administrator | `admin@example.org` |
 
 ---
 
-## Dataset import
-Four dataset kinds, each with a column map in `backend/data/schemas/<kind>.json` (accepted header aliases, types,
-required fields): `departments`, `categories`, `officers`, `grievance_history`. CSV and XLSX are supported.
+## Mock API
 
-- **UI:** Admin → Datasets → choose kind and source → *Validate (dry run)* → *Import*.
-- **CLI:**
-  ```bash
-  cd backend
-  python -m app.cli import categories data/raw/category_master.xlsx --official --dry-run
-  python -m app.cli import categories data/raw/category_master.xlsx --official
-  python -m app.cli reembed     # after importing history or changing the embedding model
-  ```
-Import order: departments → categories → officers → grievance_history. Rows are tagged `OFFICIAL` or `SYNTHETIC`.
-A row never silently overwrites a record from another source; pass `--replace` (or tick the option in the UI) to
-replace SYNTHETIC records deliberately. Every import is logged and audited. Regenerate the demo data with
-`python scripts/generate_synthetic_data.py`.
+All endpoints are under `/api/v1`. Interactive documentation: **`/api/v1/docs`** (Swagger) and **`/api/v1/redoc`**.
+Authentication is a bearer JWT from `/auth/login`. The examples below were captured from a running instance
+in rule-based mode (no LLM keys).
+
+### Endpoint reference
+
+| Method | Path | Role | Purpose |
+|---|---|---|---|
+| POST | `/auth/register` · `/auth/login` | public | Create a citizen account · obtain a JWT |
+| GET | `/auth/me` | any | Current user |
+| GET | `/meta/categories` · `/meta/wards` · `/meta/status` | public | Category Master, wards, live system capabilities |
+| POST | `/citizen/intake/converse` | citizen | **Conversational intake**: one chat turn; returns a follow-up question or a draft |
+| POST | `/citizen/intake/transcribe` | citizen | Whisper speech-to-text (audio is not stored) |
+| POST | `/citizen/intake/{token}/confirm` | citizen | **Explicit confirmation**: creates the grievance and runs the six-agent pipeline |
+| GET | `/citizen/grievances` · `/citizen/grievances/{id}` | citizen | Track own grievances and status history |
+| POST | `/citizen/grievances/{id}/confirm-resolution` · `/dispute` | citizen | Close with rating, or dispute to reopen |
+| GET | `/officer/queue` · `/officer/stats` | officer, admin | Work queues (mine, department, human review) |
+| GET | `/officer/grievances/{id}` | officer, admin | Workspace: AI summary, policy decision and reasoning, precedents, duplicates, SLA, audit |
+| POST | `/officer/grievances/{id}/review` · `/status` · `/notes` · `/reassign` · `/escalate` | officer, admin | Human decisions and backend actions |
+| POST | `/officer/grievances/{id}/duplicates/{other}/unlink` | officer, admin | Remove an incorrect duplicate link |
+| GET/PATCH | `/admin/categories` · `/admin/officers` · `/admin/departments` | admin | Category Master and directory |
+| POST | `/admin/datasets/import` | admin | Import CSV/XLSX (dry run first) for the HackFusion datasets |
+| GET/POST | `/admin/webhooks` · `/admin/webhooks/{id}/test` | admin | Register n8n/Zapier webhooks and send a signed test event |
+| POST/GET | `/mock/webhook-receiver` | public POST, admin GET | Built-in stand-in for an n8n or Zapier trigger; verifies the signature |
+| POST | `/admin/jobs/sla-scan` · `/admin/jobs/auto-close` | admin | Run the SLA monitor or auto-close now |
+| GET | `/analytics/*` | admin | Overview, trends, SLA, recurrence, bottlenecks, agent activity, page views |
+| GET | `/observability/traces` · `/traces/{id}` · `/langfuse` | admin | Traces, step detail, Langfuse connection check |
+| POST | `/observability/traces/{id}/share` | admin | Create a redacted public link |
+| GET | `/public/traces/{token}` | public | Redacted shared trace |
+| GET | `/external/datasets` · `/external/bbmp/summary` · `/external/bbmp/records` | officer, admin | Real public data: provenance, statistics, record explorer |
+
+### Example: a conversational intake in Hindi
+
+**1. The citizen writes without saying where.**
+
+```http
+POST /api/v1/citizen/intake/converse
+Authorization: Bearer <citizen token>
+
+{ "messages": [ { "role": "user", "content": "सीवर का पानी सड़क पर बह रहा है" } ], "language": "hi" }
+```
+
+```json
+{
+  "reply": "कृपया समस्या थोड़ा विस्तार से बताएं। क्या हो रहा है और कौन प्रभावित है?",
+  "ready": false,
+  "language": "hi",
+  "missing": ["details", "location", "duration"],
+  "trace_id": "…",
+  "draft": null
+}
+```
+
+**2. Once the place and timing are known, the assistant returns a draft** (excerpt of a real response):
+
+```json
+{
+  "ready": true,
+  "draft": {
+    "draft_token": "eZ3SeRdA_6mL…",
+    "extraction": {
+      "language": "hi",
+      "category_code": "SEWAGE",
+      "category_confidence": 0.856,
+      "urgency": "high",
+      "ward": "Ward 11",
+      "location_text": "Ganesh Peth, Ward 11",
+      "department": { "code": "DRAIN", "name": "Drainage & Sewerage" },
+      "policy_preview": { "requires_human_review": false, "is_sensitive": false, "sla_hours": 24 },
+      "provider": "deterministic-rules",
+      "method": "rules"
+    }
+  }
+}
+```
+
+**3. The citizen confirms.** Without `"confirmed": true` the API answers `409 policy_violation`.
+
+```http
+POST /api/v1/citizen/intake/eZ3SeRdA_6mL…/confirm
+
+{ "confirmed": true }
+```
+
+```json
+{
+  "public_id": "GRV-2026-461365",
+  "status": "ASSIGNED",
+  "category": { "code": "SEWAGE", "name_en": "Sewage overflow", "name_hi": "सीवर ओवरफ्लो", "name_mr": "सांडपाणी वाहणे" },
+  "department": { "code": "DRAIN", "name": "Drainage & Sewerage" },
+  "urgency": "high",
+  "needs_human_review": false,
+  "sla": {
+    "due_at": "2026-11-12T11:49:54+00:00",
+    "sla_hours": 24,
+    "predicted_resolution_hours": 17.9,
+    "breach_probability": 0.185,
+    "estimate_label": "Demo estimate based on SYNTHETIC history, not a measure of real-world accuracy."
+  }
+}
+```
+
+**4. What the officer sees** (`GET /officer/grievances/GRV-2026-461365`, excerpt):
+
+```json
+{
+  "precedents": [
+    { "rank": 1, "public_id": "SYN-H-00544", "similarity": 0.8092, "scope": "category",
+      "summary": "SYN-H-00544 (Ward 11, resolved in 1.5 days): Choked sewer line cleared and manhole cover replaced; area disinfected.",
+      "data_source": "SYNTHETIC" }
+  ],
+  "duplicates": [
+    { "public_id": "GRV-2026-495826", "score": 0.9, "linked_by": "AI_SYSTEM",
+      "signals": { "semantic": 0.82, "geo": 1.0, "time": 0.993, "category": 1.0, "distance_km": 0.0 } }
+  ],
+  "policy_explanation": {
+    "policy_refs": ["POL-AUTOCLOSE-01", "POL-LIABILITY-01", "POL-NOREJECT-01", "POL-SLA-01"],
+    "reasoning": [
+      "Category Master entry SEWAGE: department DRAIN, SLA 24 h, sensitive=False, identity hiding=False, threshold 0.70",
+      "POL-SENSITIVE-01 sensitive category: no",
+      "POL-CONF-01 confidence 0.86 vs threshold 0.70: pass",
+      "POL-INJECT-01 instruction-like text: none"
+    ]
+  }
+}
+```
+
+### Webhook payload (n8n / Zapier)
+
+```http
+POST <your webhook URL>
+Content-Type: application/json
+X-Grievance-Event: grievance.assigned
+X-Grievance-Signature: sha256=<HMAC-SHA256 of the raw body with WEBHOOK_SIGNING_SECRET>
+
+{
+  "event": "grievance.assigned",
+  "data": { "grievance_id": "GRV-2026-461365", "status": "ASSIGNED", "category": "SEWAGE", "department": "DRAIN",
+            "urgency": "high", "ward": "Ward 11", "is_sensitive": false, "escalation_level": 0,
+            "sla_due_at": "2026-11-12T11:49:54+00:00", "data_source": "LIVE" },
+  "sent_at": "2026-11-11T11:49:55+00:00"
+}
+```
+
+Events: `grievance.created`, `grievance.assigned`, `grievance.review_required`, `grievance.status_changed`,
+`grievance.escalated`, `grievance.sla_at_risk`, `grievance.duplicate_linked`, `grievance.reopened`,
+`webhook.test`. Payloads never contain complaint text or citizen identity.
 
 ---
 
-## API documentation
-Interactive OpenAPI docs: **`/api/v1/docs`** (Swagger) and **`/api/v1/redoc`**. Main groups:
+## Observability and the live trace link
 
-| Prefix | Audience | Highlights |
-|--------|----------|-----------|
-| `/auth` | all | register, login, me |
-| `/meta` | public | categories, departments, wards, system status (LLM chain, embeddings, STT, data sources) |
-| `/citizen` | citizen | `intake/analyze`, `intake/transcribe`, `intake/{token}/confirm`, grievances, confirm-resolution, dispute |
-| `/notifications` | all | list, mark read |
-| `/officer` | officer, admin | queue, stats, grievance detail, review, status, notes, reassign, escalate, unlink duplicate |
-| `/admin` | admin | categories, departments, officers, datasets, webhooks, jobs (sla-scan, auto-close), audit |
-| `/analytics` | admin | overview, departments, trends, categories, sla, recurrence, bottlenecks, agents |
-| `/observability` | admin | traces, trace detail, share/unshare, errors |
-| `/public/traces/{token}` | public | redacted shared trace |
+Each workflow (`intake_conversation`, `intake_analysis`, `grievance_pipeline`, `sla_scan`, `auto_close`) is
+recorded step by step: agent, provider and model, inputs (PII-redacted), structured output, retrieved evidence,
+confidence, timing, errors and a **decision trail**. Each trail lists what the agent saw, which rule or score it
+applied and what it decided. The trail is a structured explanation, not raw model chain-of-thought.
+
+- **In the app:** Admin → Observability lists traces and shows every step. *Create public link* produces a
+  redacted page at `/share/trace/<token>`. It leaves out complaint text, place names and identities.
+- **In Langfuse:** with keys configured, every trace is exported as a public Langfuse trace (one span per agent,
+  LLM calls as generations). The app reads your Langfuse project ID through the API and shows the real link.
+  It never constructs a URL it cannot verify.
+
+**To produce the live trace link for submission:**
+
+1. Create a free project at https://cloud.langfuse.com (or https://us.cloud.langfuse.com).
+2. Project settings → API keys → create a key pair.
+3. In `backend/.env` set `LANGFUSE_HOST`, `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY`, then restart the backend.
+4. Admin → Observability should show *Langfuse connected*. File a grievance, open its trace and use
+   *Open in Langfuse*. That page is publicly viewable.
+
+> Status in this repository: the export is implemented and tested against a mocked Langfuse API. It has not
+> been run against a live Langfuse project because no keys were available while building.
+
+---
+
+## Data and provenance
+
+| Dataset | Status | Used by the agents | Licence |
+|---|---|---|---|
+| HackFusion Category Master, Mock Grievance History, Department Directory | **Synthetic** stand-ins (`backend/data/synthetic/`, generated by `scripts/generate_synthetic_data.py`) until the official files are released | Yes | Generated for this project |
+| BBMP Sahaaya 2.0 citizen grievances (Vonter) | **Imported:** 1,230,890 real records, Feb 2020 to Aug 2026 | No. Reference statistics and record explorer only | ODbL v1.0 |
+| BBMP Grievances Data 2025 (OpenCity) | Downloaded; used to verify the import (all 126,974 IDs matched) | No | Other (Public Domain) |
+| data.gov.in CPGRAM: monthly receipts and disposals; nodal officer directory | Not downloaded: the OGD API requires a personal API key (`DATA_GOV_IN_API_KEY`) | No | Government Open Data License - India |
+| CPGRAMS individual grievances | Not accessible: available only to authorised users on pgportal.gov.in | No | |
+
+The real BBMP records contain **no complaint text written by citizens** and **no resolution dates**, so they are
+not used for RAG, duplicate detection or SLA training. Staff names are not imported, and phone numbers, e-mail
+addresses, long ID numbers and named individuals in staff remarks are redacted. Missing values stay empty and
+are never invented. Full details, including checksums and every transformation: **[backend/data/external/PROVENANCE.md](backend/data/external/PROVENANCE.md)**.
+
+**Attribution:** Contains information from bbmp-citizen-grievances (github.com/Vonter/bbmp-citizen-grievances),
+made available under the ODbL v1.0. Some individual contents are under copyright by BBMP.
+
+Official HackFusion datasets, when released, are imported through Admin → Datasets or
+`python -m app.cli import <kind> <file> --official` using the column maps in `backend/data/schemas/`. They are
+tagged `OFFICIAL` and never silently overwrite synthetic records. The synthetic-data banner disappears once no
+synthetic data remains in use.
+
+---
+
+## Security, privacy and responsible AI
+
+- **Human oversight:** sensitive categories (harassment, child safety, corruption), low confidence, instruction-like text and sensitive keywords in other categories all route to human review. Only authorised officers see sensitive cases.
+- **Hard limits in code:** the AI cannot close sensitive grievances, cannot release a case from review, cannot reject (there is no rejected status) and makes no liability findings. Each is covered by tests.
+- **Untrusted input:** complaint text is placed only inside delimited data blocks in the LLM user turn, never in instructions; LLM output is schema-validated and cross-checked.
+- **Audit:** every AI action writes an `AI_SYSTEM` audit event with provider, model, confidence, explanation, policy references and trace ID.
+- **Privacy:** identity masking for officers, full identity hiding for sensitive categories, PII redaction in traces, audit explanations and shared links, voice recordings deleted after transcription, consent-based anonymous page analytics with no cookies or third parties.
+- **Application security:** JWT auth, role and object-level authorization, bcrypt, input validation, rate limits, a registration honeypot, daily submission caps, security headers, a strict Content-Security-Policy (no `unsafe-eval`), optional HTTPS redirect and HSTS behind a TLS proxy, and secrets only in `backend/.env`.
+
+## Accessibility and inclusion
+
+Marathi, Hindi and English throughout the citizen journey; voice input (Whisper) with an editable transcript;
+read-aloud of the draft and the grievance in the citizen's language; keyboard navigation, visible focus, skip
+link, labelled controls and status conveyed in text, not colour alone; layouts verified at 390, 820 and 1440
+pixels wide.
 
 ---
 
 ## Testing
 
 ```bash
-cd backend && python -m pytest -q
-cd frontend && npm run lint && npm run typecheck && npm test && npm run build
+cd backend && python -m pytest -q          # 80 tests
+cd frontend && npm run lint && npm run typecheck && npm test && npm run build   # 10 tests
 ```
 
-Backend tests run on a throw-away SQLite database with **no LLM keys** (fallback mode) and the hashing embedder.
-The 12 mandatory scenarios map to:
+Backend tests run on a temporary SQLite database with no LLM keys (fallback mode). They cover the twelve
+mandated scenarios (submission with confirmation, tracking, sensitive review, sensitive never auto-closed,
+low-confidence review, duplicates preserving records, RAG relevance, SLA warnings, dispute and reopen,
+unauthorized access, AI audit events, missing-credential fallback) plus conversational intake, decision trails,
+Langfuse export (mocked), webhook signatures, the BBMP importer and redaction, and the security headers.
 
-| # | Scenario | Test |
-|---|----------|------|
-| 1 | Citizen submits and confirms | `test_citizen_flow.py::test_citizen_submits_and_confirms_grievance`, `test_submission_requires_explicit_confirmation` |
-| 2 | Citizen tracks a grievance | `test_citizen_flow.py::test_citizen_tracks_individual_grievance` |
-| 3 | Sensitive → human review | `test_policy.py::test_sensitive_grievance_goes_to_human_review` |
-| 4 | Sensitive never auto-closed | `test_policy.py::test_sensitive_grievance_cannot_be_auto_closed` |
-| 5 | Low confidence → review | `test_policy.py::test_low_confidence_classification_triggers_review` |
-| 6 | Duplicates preserve records | `test_agents.py::test_duplicate_detection_preserves_individual_records` |
-| 7 | RAG retrieves relevant examples | `test_agents.py::test_rag_retrieves_relevant_examples` |
-| 8 | SLA warnings generated | `test_agents.py::test_sla_warnings_are_generated` |
-| 9 | Dispute reopens | `test_citizen_flow.py::test_disputed_resolution_reopens_grievance` |
-| 10 | Unauthorized access blocked | `test_security.py` (anonymous, citizen, cross-department, other citizen) |
-| 11 | AI actions audited | `test_agents.py::test_ai_actions_generate_complete_audit_events` |
-| 12 | Missing credentials → fallback | `test_llm_fallback.py` (also Groq→Gemini fallback and invalid LLM output) |
+## Configuration
 
-Frontend tests (Vitest + Testing Library) cover the API client, role guards, SLA/status components and the
-analyse → review → explicit-confirm intake flow.
+`backend/.env` (see `.env.example` for every key): `DATABASE_URL`, `JWT_SECRET`, `CORS_ORIGINS`,
+`GROQ_API_KEY` / `GROQ_MODEL`, `GEMINI_API_KEY` / `GEMINI_MODEL`, `EMBEDDING_PROVIDER`, `STT_PROVIDER` /
+`WHISPER_MODEL`, policy thresholds, `LANGFUSE_*`, `WEBHOOK_SIGNING_SECRET`, `DATA_GOV_IN_API_KEY`,
+`MAX_GRIEVANCES_PER_DAY`, `ENFORCE_HTTPS`.
 
----
+`frontend/.env` holds public values only: `VITE_API_BASE_URL`, `VITE_SITE_URL`, `VITE_SUPPORT_EMAIL`.
 
-## Demo workflow
-1. **Landing page** — capability badges show the live LLM chain, embedding model and voice availability.
-2. **Citizen** (`citizen@example.org`) → *File a grievance* → switch language to हिंदी or मराठी → type or speak
-   *"Ganesh Peth में पिछले 4 दिनों से सीवर का पानी सड़क पर बह रहा है"* → *Analyse* → review category, ward, urgency,
-   department, confidence → tick confirmation → *Confirm and submit* → grievance ID + tracking timeline.
-3. **Duplicate** — as `citizen2@example.org`, file the same problem in English; the officer view shows both linked
-   (cross-lingual), each with its own ID and timeline.
-4. **Sensitive case** — file *"A group of men harass women near the bus stop at Ambedkar Nagar every evening"* →
-   goes to *Under review*, identity hidden. Sign in as `officer.safety@example.org` → *Human review* → approve & assign.
-5. **Officer** (`officer.water@example.org`) → queue → open a case → AI summary, policy decision with policy refs,
-   precedents, linked reports, SLA prediction → *Start work* → *Resolve* with a resolution summary.
-6. **Citizen** confirms with a rating — or disputes, which reopens the grievance (second dispute escalates).
-7. **Admin** (`admin@example.org`) → *Overview* (live figures), *SLA & insights* → *Run SLA scan now* →
-   *Run auto-close* (sensitive cases are skipped by policy) → *Category Master* → *Datasets* (dry-run an import) →
-   *Audit log* (filter `AI_SYSTEM`) → *Observability* → open the pipeline trace → *Create public link*.
+## Project structure
 
----
+```text
+GRIEVANCE/
+├── backend/
+│   ├── app/
+│   │   ├── agents/      intake, conversation, policy, rag, duplicate, predictive, actions, orchestrator
+│   │   ├── api/         auth, meta, citizen, officer, admin, analytics, observability, external, mock
+│   │   ├── llm/         Groq → Gemini → rules client, embeddings, Whisper
+│   │   ├── services/    lifecycle, audit, notifications, webhooks, tracing, importer, external data, seed
+│   │   └── models/ core/ db/ schemas/
+│   ├── alembic/         migrations (PostgreSQL + pgvector, SQLite)
+│   ├── data/            synthetic/, schemas/, external/ (PROVENANCE.md; raw downloads git-ignored)
+│   ├── tests/
+│   └── .env.example, requirements.txt, requirements-ml.txt, Dockerfile
+├── frontend/
+│   ├── src/             pages (public, citizen, officer, admin), components, lib
+│   ├── public/          brand assets, icons, manifest
+│   └── .env.example, nginx/, Dockerfile
+├── docker-compose.yml
+├── .gitignore
+└── README.md
+```
 
 ## Known limitations
-- All datasets are **SYNTHETIC** until the official HackFusion files are imported; accuracy and SLA figures are demo
-  estimates, not real-world measurements.
-- Without Groq/Gemini keys, intake uses the rule engine: robust for clear complaints, deliberately conservative
-  (more cases go to human review) for vague ones.
-- The hashing embedder (used when the ML extras are not installed) is language-bound; install
-  `requirements-ml.txt` for cross-lingual retrieval and duplicate detection.
-- SMS/e-mail channels are recorded as in-app notifications only; webhooks are the integration point for real
-  gateways.
-- The rate limiter is in-process (single instance); use a shared store for horizontal scaling.
+
+- The agents use synthetic stand-ins for the three HackFusion datasets until the official files are released; SLA figures are demo estimates.
+- Without Groq or Gemini keys, intake uses the rule engine, which is reliable for clear complaints and deliberately sends vague ones to human review.
+- The Langfuse export has been verified against a mocked API only; a live link needs your Langfuse keys.
+- data.gov.in CPGRAM statistics need a personal OGD API key; the fetcher has not been run against the live API.
+- Updates are delivered in the app; SMS and WhatsApp are planned and can be connected through webhooks.
+- The Docker image excludes the large ML models by default (`--build-arg INSTALL_ML=true` adds multilingual embeddings and Whisper).
