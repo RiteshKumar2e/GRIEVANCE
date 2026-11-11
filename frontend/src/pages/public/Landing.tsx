@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Logo, useSystemStatus } from "../../components/AppShell";
 import { IconClose, IconMenu } from "../../components/icons";
@@ -36,6 +36,17 @@ const NAV_LINK = clsx(
   "block rounded-sm px-3 py-2 text-[15px] font-medium text-ink-soft decoration-2 underline-offset-[6px] transition-colors duration-150 hover:text-navy hover:underline motion-reduce:transition-none",
   FOCUS,
 );
+
+/**
+ * In-page navigation that scrolls to a section without writing "#section" into the address bar.
+ * The href stays on the link so it still works with JavaScript disabled or when opened in a new tab.
+ */
+function scrollToSection(e: MouseEvent<HTMLAnchorElement>, id: string) {
+  if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+  e.preventDefault();
+  if (id === "top") window.scrollTo({ top: 0 });
+  else document.getElementById(id)?.scrollIntoView({ block: "start" });
+}
 
 /* ------------------------------------------------------------------ icons (24px grid, 1.6 stroke) */
 
@@ -141,7 +152,7 @@ function Header({ submitTo }: { submitTo: string }) {
           <ul className="flex items-center gap-1">
             {links.map(([href, label]) => (
               <li key={href}>
-                <a href={href} className={NAV_LINK}>
+                <a href={href} onClick={(e) => scrollToSection(e, href.slice(1))} className={NAV_LINK}>
                   {label}
                 </a>
               </li>
@@ -186,7 +197,13 @@ function Header({ submitTo }: { submitTo: string }) {
           <ul>
             {links.map(([href, label]) => (
               <li key={href} className="border-b border-stone">
-                <a href={href} onClick={() => setOpen(false)} className={clsx("flex min-h-12 items-center text-[16px] font-medium text-navy", FOCUS)}>
+                <a
+                  href={href}
+                  onClick={(e) => {
+                    setOpen(false);
+                    scrollToSection(e, href.slice(1));
+                  }}
+                  className={clsx("flex min-h-12 items-center text-[16px] font-medium text-navy", FOCUS)}>
                   {label}
                 </a>
               </li>
@@ -243,16 +260,22 @@ export default function Landing() {
   const submitTo = !user || user.role === "citizen" ? "/citizen/new" : homeFor(user.role);
   const trackTo = !user || user.role === "citizen" ? "/citizen" : homeFor(user.role);
 
-  // Honour /#section links arriving from other pages.
+  // Other pages link here with { state: { section } }; old "/#section" URLs still work and are tidied to "/".
+  const section = (loc.state as { section?: string } | null)?.section ?? (loc.hash ? loc.hash.slice(1) : undefined);
   useEffect(() => {
-    if (!loc.hash) return;
-    document.getElementById(loc.hash.slice(1))?.scrollIntoView();
-  }, [loc.hash]);
+    if (!section) return;
+    document.getElementById(section)?.scrollIntoView({ block: "start" });
+    if (window.location.hash) window.history.replaceState(window.history.state, "", window.location.pathname + window.location.search);
+  }, [section, loc.key]);
 
   return (
     <div lang={lang} className="min-h-screen bg-canvas text-navy">
       <a
         href="#main"
+        onClick={(e) => {
+          e.preventDefault();
+          document.getElementById("main")?.focus();
+        }}
         className="sr-only rounded-md bg-navy px-4 py-3 font-semibold text-white focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:outline focus:outline-[3px] focus:outline-amber"
       >
         {c.nav.skip}
@@ -329,7 +352,7 @@ export default function Landing() {
                   ))}
                 </ul>
                 <p className="mt-5 border-t border-stone-dark/70 pt-4 text-[14px] leading-relaxed text-ink-soft">{c.before.sensitive}</p>
-                <a href="#faq" className={clsx(TEXT_LINK, "mt-4 inline-flex items-center gap-1.5 text-[15px]")}>
+                <a href="#faq" onClick={(e) => scrollToSection(e, "faq")} className={clsx(TEXT_LINK, "mt-4 inline-flex items-center gap-1.5 text-[15px]")}>
                   {c.before.help}
                   <IconArrow />
                 </a>

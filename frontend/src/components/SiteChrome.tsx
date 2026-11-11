@@ -45,7 +45,7 @@ export function SiteFooter({ compact = false }: { compact?: boolean }) {
           </div>
           <nav aria-label="Footer">
             <ul className="grid grid-cols-2 gap-x-8 text-[14px] sm:flex sm:flex-wrap sm:gap-x-6 sm:gap-y-2">
-              <li><Link to="/#about" className={link}>About</Link></li>
+              <li><Link to="/" state={{ section: "about" }} className={link}>About</Link></li>
               <li><Link to="/help" className={link}>Help</Link></li>
               <li>
                 {SUPPORT_EMAIL ? (
