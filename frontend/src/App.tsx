@@ -12,6 +12,7 @@ import NotFound from "./pages/public/NotFound";
 import Register from "./pages/public/Register";
 
 // Route-level code splitting: dashboards and charts load only when needed.
+const Help = lazy(() => import("./pages/public/Help"));
 const SharedTrace = lazy(() => import("./pages/public/SharedTrace"));
 const PrivacyPolicy = lazy(() => import("./pages/public/Legal").then((m) => ({ default: m.PrivacyPolicy })));
 const Terms = lazy(() => import("./pages/public/Legal").then((m) => ({ default: m.Terms })));
@@ -35,6 +36,7 @@ const META: [string, string, string?, boolean?][] = [
   ["/", "", undefined, false],
   ["/login", "Sign in", "Sign in to file and track grievances, or to manage them as an officer or administrator."],
   ["/register", "Create an account", "Register as a citizen to report civic problems in Hindi, Marathi or English."],
+  ["/help", "Help and support", "Answers to common questions about filing, tracking and disputing grievances."],
   ["/privacy", "Privacy policy", "How GRIEVANCE collects, uses, protects and retains information."],
   ["/terms", "Terms & conditions", "Terms for using the GRIEVANCE grievance-redressal platform."],
   ["/share/trace/:token", "Shared agent trace", "A redacted, shareable view of one agent workflow.", true],
@@ -86,6 +88,7 @@ export default function App() {
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/help" element={<Help />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/share/trace/:token" element={<SharedTrace />} />

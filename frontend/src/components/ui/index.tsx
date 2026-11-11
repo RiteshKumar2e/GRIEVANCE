@@ -6,20 +6,21 @@ type Variant = "primary" | "secondary" | "ghost" | "danger";
 
 export const Button = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant | "accent"; loading?: boolean; size?: "sm" | "md" }>(
   function Button({ variant = "primary", loading, size = "md", className, children, disabled, ...rest }, ref) {
-    const v = variant === "accent" ? "primary" : variant;
+    const v = variant;
     return (
       <button
         ref={ref}
         disabled={disabled || loading}
         aria-busy={loading || undefined}
         className={clsx(
-          "inline-flex items-center justify-center gap-2 rounded-md font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none",
+          "inline-flex items-center justify-center gap-2 rounded-md font-semibold transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none",
           size === "sm" ? "h-8 px-3 text-[13px]" : "h-10 px-4 text-sm",
           {
-            "bg-brand-700 text-white hover:bg-brand-800": v === "primary",
-            "border border-line bg-surface text-ink hover:border-ink-muted": v === "secondary",
-            "text-ink-soft hover:bg-black/[0.04] hover:text-ink": v === "ghost",
-            "bg-status-critical text-white hover:bg-[#962020]": v === "danger",
+            "bg-brand-700 text-white hover:bg-brand-800 active:bg-brand-900": v === "primary",
+            "bg-amber text-navy hover:bg-amber-hover active:bg-amber-active": v === "accent",
+            "border border-stone-dark bg-surface text-ink hover:border-ink-muted hover:bg-canvas active:bg-stone": v === "secondary",
+            "text-ink-soft hover:bg-navy/[0.05] hover:text-ink active:bg-navy/[0.08]": v === "ghost",
+            "bg-status-critical text-white hover:bg-[#962020] active:bg-[#7E1B1B]": v === "danger",
           },
           className,
         )}
@@ -34,7 +35,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLBut
 
 export function Card({ className, children, title, action, subtitle, flush }: { className?: string; children: ReactNode; title?: ReactNode; action?: ReactNode; subtitle?: ReactNode; flush?: boolean }) {
   return (
-    <section className={clsx("rounded-lg border border-line bg-surface", className)}>
+    <section className={clsx("min-w-0 rounded-lg border border-line bg-surface", className)}>
       {(title || action) && (
         <header className="flex flex-wrap items-start justify-between gap-3 border-b border-line px-5 py-3.5">
           <div className="min-w-0">
@@ -91,7 +92,7 @@ export function Field({ label, hint, error, children, htmlFor }: { label: string
 }
 
 const control =
-  "w-full rounded-md border border-line bg-surface px-3 text-sm text-ink placeholder:text-ink-muted/80 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 disabled:bg-canvas aria-[invalid=true]:border-status-critical";
+  "w-full rounded-md border border-stone-dark bg-surface px-3 text-sm text-ink placeholder:text-ink-muted/80 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 disabled:bg-canvas aria-[invalid=true]:border-status-critical";
 
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(function Input({ className, ...rest }, ref) {
   return <input ref={ref} className={clsx(control, "h-10", className)} {...rest} />;
@@ -183,7 +184,7 @@ export function Tabs<T extends string>({ value, onChange, items, label = "View" 
           onClick={() => onChange(it.value)}
           className={clsx(
             "whitespace-nowrap rounded px-3 py-1.5 text-[13px] font-medium",
-            value === it.value ? "bg-ink text-white" : "text-ink-soft hover:text-ink",
+            value === it.value ? "bg-navy text-white" : "text-ink-soft hover:text-ink",
           )}
         >
           {it.label}
@@ -217,7 +218,7 @@ export function PageHeader({ title, subtitle, actions, eyebrow }: { title: React
     <div className="mb-7 flex flex-col gap-4 border-b border-line pb-6 sm:flex-row sm:items-end sm:justify-between">
       <div className="min-w-0">
         {eyebrow && <div className="mb-2">{eyebrow}</div>}
-        <h1 className="break-words font-display text-[26px] font-semibold leading-tight text-ink sm:text-[30px]">{title}</h1>
+        <h1 className="break-words text-[26px] font-bold leading-tight tracking-tight text-ink sm:text-[30px]">{title}</h1>
         {subtitle && <div className="mt-2 max-w-prose text-[15px] text-ink-soft">{subtitle}</div>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}

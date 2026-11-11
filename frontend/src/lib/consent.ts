@@ -39,19 +39,18 @@ export function normalisePath(path: string): string {
 }
 
 let last = "";
+let disabled = false; // stop after the first failure (e.g. an older backend without the endpoint)
 export function trackPageView(pathname: string) {
-  if (getConsent() !== "accepted") return;
+  if (disabled || getConsent() !== "accepted") return;
   const path = normalisePath(pathname);
   if (path === last) return;
   last = path;
-  const body = JSON.stringify({ path });
-  try {
-    if (navigator.sendBeacon) {
-      navigator.sendBeacon(`${apiBase}/meta/pageview`, new Blob([body], { type: "text/plain" }));
-      return;
-    }
-  } catch {
-    /* fall through */
-  }
-  void fetch(`${apiBase}/meta/pageview`, { method: "POST", headers: { "Content-Type": "text/plain" }, body, keepalive: true }).catch(() => undefined);
+  // text/plain keeps this a CORS "simple request" (no preflight); keepalive lets it finish during navigation.
+  void fetch(`${apiBase}/meta/pageview`, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ path }), keepalive: true })
+    .then((r) => {
+      if (!r.ok) disabled = true;
+    })
+    .catch(() => {
+      disabled = true;
+    });
 }

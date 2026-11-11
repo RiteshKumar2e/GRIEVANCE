@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Logo } from "../../components/AppShell";
+import { FullLogo } from "../../components/AppShell";
 import { PasswordInput } from "../../components/PasswordInput";
 import { SiteFooter } from "../../components/SiteChrome";
 import { useToast } from "../../components/Toast";
@@ -76,9 +76,11 @@ export default function Register() {
       <main className="flex flex-1 items-center justify-center px-4 py-10">
         <div className="w-full max-w-md">
           <div className="mb-6 flex justify-center">
-            <Logo />
+            <Link to="/" aria-label="GRIEVANCE home">
+              <FullLogo width={300} />
+            </Link>
           </div>
-          <div className="rounded-lg border border-line bg-white p-6 shadow-card">
+          <div className="rounded-lg border border-line bg-surface p-6 shadow-card">
             <h1 className="text-xl font-semibold text-ink">Create a citizen account</h1>
             <p className="mt-1 text-sm text-ink-muted">Your contact details are shared only with the officer handling your grievance, and are hidden for sensitive matters.</p>
             <form onSubmit={submit} className="mt-6 space-y-4" noValidate>

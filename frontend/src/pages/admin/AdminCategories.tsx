@@ -34,7 +34,7 @@ export default function AdminCategories() {
       {q.isLoading && <SkeletonRows rows={8} />}
       {q.isError && <ErrorState error={q.error} onRetry={() => q.refetch()} />}
       {q.data && (
-        <div className="overflow-x-auto rounded-lg border border-line bg-white">
+        <div className="overflow-x-auto rounded-lg border border-line bg-surface">
           <table className="w-full min-w-[900px] text-sm">
             <thead className="border-b border-line bg-canvas text-left text-xs uppercase tracking-wide text-ink-muted">
               <tr>

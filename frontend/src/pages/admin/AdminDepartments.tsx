@@ -36,7 +36,7 @@ export default function AdminDepartments() {
       {depts.isLoading && <SkeletonRows />}
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {depts.data?.map((d) => (
-          <button key={d.code} onClick={() => setDept(dept === d.code ? "" : d.code)} className={`rounded-lg border bg-white p-4 text-left shadow-card transition-colors ${dept === d.code ? "border-brand-500 ring-2 ring-brand-100" : "border-line hover:border-brand-300"}`}>
+          <button key={d.code} onClick={() => setDept(dept === d.code ? "" : d.code)} className={`rounded-lg border bg-surface p-4 text-left shadow-card transition-colors ${dept === d.code ? "border-brand-500 ring-2 ring-brand-100" : "border-line hover:border-brand-300"}`}>
             <div className="flex items-start justify-between gap-2">
               <div>
                 <p className="font-semibold">{d.name}</p>

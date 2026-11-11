@@ -20,7 +20,7 @@ export default function SharedTrace() {
   const q = useQuery({ queryKey: ["public-trace", token], queryFn: () => api<PublicTrace>(`/public/traces/${token}`, { auth: false }) });
   return (
     <div className="min-h-screen bg-canvas">
-      <header className="border-b border-line bg-white">
+      <header className="border-b border-line bg-surface">
         <div className="mx-auto flex h-14 max-w-4xl items-center px-4">
           <Logo />
         </div>

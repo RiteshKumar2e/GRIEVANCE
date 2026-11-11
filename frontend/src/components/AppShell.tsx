@@ -11,16 +11,36 @@ import { SyntheticBanner } from "./domain";
 import { IconBell, IconClose, IconMenu, IconSignOut } from "./icons";
 import { SiteFooter } from "./SiteChrome";
 
-export function Logo({ to = "/" }: { to?: string }) {
+/** GRIEVANCE logo: the official emblem plus the wordmark. `size` sets the emblem height in px. */
+export function Logo({ to = "/", size = 34, emblemOnly = false }: { to?: string; size?: number; emblemOnly?: boolean }) {
   return (
-    <Link to={to} className="flex items-center gap-2.5" aria-label="GRIEVANCE home">
-      <svg viewBox="0 0 32 32" className="h-8 w-8" aria-hidden>
-        <rect width="32" height="32" rx="7" fill="#1c3260" />
-        <path d="M9 10h14M9 16h10M9 22h6" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" />
-        <circle cx="23" cy="21" r="3.2" fill="#e8892b" />
-      </svg>
-      <span className="font-display text-lg font-bold tracking-wide text-brand-900">GRIEVANCE</span>
+    <Link to={to} className="flex shrink-0 items-center gap-2" aria-label="GRIEVANCE home">
+      <img src="/brand/grievance-emblem.webp" alt="" width={Math.round(size * 1.08)} height={size} className="block" style={{ height: size, width: "auto" }} />
+      {!emblemOnly && (
+        <img
+          src="/brand/grievance-wordmark.webp"
+          alt="GRIEVANCE"
+          width={Math.round(size * 0.52 * 6.8)}
+          height={Math.round(size * 0.52)}
+          className="block"
+          style={{ height: Math.round(size * 0.52), width: "auto" }}
+        />
+      )}
     </Link>
+  );
+}
+
+/** Full lockup with tagline, for sign-in screens and brand moments. */
+export function FullLogo({ width = 320, className }: { width?: number; className?: string }) {
+  return (
+    <img
+      src="/brand/grievance-logo.webp"
+      alt="GRIEVANCE. Speak, Track, Resolve. An Intelligent Grievance Redressal Ecosystem."
+      width={width}
+      height={Math.round((width * 327) / 1200)}
+      className={className}
+      style={{ width, height: "auto", maxWidth: "100%" }}
+    />
   );
 }
 
@@ -33,7 +53,7 @@ export function LanguageSwitcher() {
   return (
     <label className="flex items-center gap-1.5 text-sm">
       <span className="sr-only">Language</span>
-      <select value={lang} onChange={(e) => setLang(e.target.value as Lang)} className="h-8 rounded-md border border-line bg-white px-2 text-sm">
+      <select value={lang} onChange={(e) => setLang(e.target.value as Lang)} className="h-8 rounded-md border border-line bg-surface px-2 text-sm">
         {(Object.keys(LANG_LABEL) as Lang[]).map((l) => (
           <option key={l} value={l}>
             {LANG_LABEL[l]}
@@ -168,7 +188,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-[70] focus:rounded focus:bg-white focus:px-3 focus:py-2 focus:shadow">
+      <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-[70] focus:rounded focus:bg-surface focus:px-3 focus:py-2 focus:shadow">
         Skip to content
       </a>
       {status.data?.synthetic_data_in_use && <SyntheticBanner />}

@@ -46,7 +46,7 @@ export default function Notifications() {
       {q.isError && <ErrorState error={q.error} onRetry={() => q.refetch()} />}
       {q.data && q.data.items.length === 0 && <EmptyState title="Nothing here yet" body="Updates about your grievances will appear here." />}
       {q.data && q.data.items.length > 0 && (
-        <ul className="divide-y divide-line overflow-hidden rounded-lg border border-line bg-white">
+        <ul className="divide-y divide-line overflow-hidden rounded-lg border border-line bg-surface">
           {q.data.items.map((n) => (
             <li key={n.id} className={clsx("px-4 py-3.5", !n.is_read && "bg-brand-50/40")}>
               <div className="flex items-start justify-between gap-3">

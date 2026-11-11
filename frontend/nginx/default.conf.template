@@ -1,0 +1,56 @@
+# GRIEVANCE frontend: static SPA served by nginx.
+# Rendered by the nginx image's envsubst step. Variables: API_ORIGIN, ENFORCE_HTTPS.
+
+# Behind a TLS-terminating proxy: redirect plain HTTP when ENFORCE_HTTPS=true.
+map "$http_x_forwarded_proto:${ENFORCE_HTTPS}" $grievance_redirect_https {
+  "http:true" 1;
+  default     0;
+}
+# Send HSTS only on requests that actually arrived over HTTPS.
+map $http_x_forwarded_proto $grievance_hsts {
+  https   "max-age=31536000; includeSubDomains";
+  default "";
+}
+
+server {
+  listen 80;
+  server_name _;
+  root /usr/share/nginx/html;
+  index index.html;
+  server_tokens off;
+
+  if ($grievance_redirect_https) {
+    return 301 https://$host$request_uri;
+  }
+
+  # No 'unsafe-eval' anywhere: the bundle does not use eval or new Function.
+  add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' ${API_ORIGIN}; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" always;
+  add_header Strict-Transport-Security $grievance_hsts always;
+  add_header X-Content-Type-Options nosniff always;
+  add_header X-Frame-Options DENY always;
+  add_header Referrer-Policy strict-origin-when-cross-origin always;
+  add_header Permissions-Policy "microphone=(self), camera=(), geolocation=()" always;
+
+  gzip on;
+  gzip_types text/css application/javascript application/json image/svg+xml application/xml text/plain;
+
+  # Hashed build assets can be cached for a long time.
+  location /assets/ {
+    expires 1y;
+    add_header Cache-Control "public, max-age=31536000, immutable" always;
+    add_header X-Content-Type-Options nosniff always;
+    try_files $uri =404;
+  }
+
+  # Single-page app: unknown paths render index.html (the app shows its own 404 page).
+  location / {
+    add_header Cache-Control "no-cache" always;
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' ${API_ORIGIN}; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" always;
+    add_header Strict-Transport-Security $grievance_hsts always;
+    add_header X-Content-Type-Options nosniff always;
+    add_header X-Frame-Options DENY always;
+    add_header Referrer-Policy strict-origin-when-cross-origin always;
+    add_header Permissions-Policy "microphone=(self), camera=(), geolocation=()" always;
+    try_files $uri $uri/ /index.html;
+  }
+}

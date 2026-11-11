@@ -10,11 +10,15 @@ const NL = String.fromCharCode(10);
 function seoFiles(siteUrl: string): Plugin {
   const site = siteUrl.replace(/\/+$/, "");
   const pages = ["/", "/help", "/login", "/register", "/privacy", "/terms"];
+  let outDir = resolve(__dirname, "dist");
   return {
     name: "grievance-seo-files",
     apply: "build",
+    configResolved(cfg) {
+      outDir = resolve(cfg.root, cfg.build.outDir);
+    },
     closeBundle() {
-      const out = resolve(__dirname, "dist");
+      const out = outDir;
       const today = new Date().toISOString().slice(0, 10);
       const urls = pages.map((p) => `  <url><loc>${site}${p}</loc><lastmod>${today}</lastmod></url>`);
       writeFileSync(

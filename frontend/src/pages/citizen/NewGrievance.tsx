@@ -72,7 +72,8 @@ export default function NewGrievance() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    logRef.current?.lastElementChild?.scrollIntoView({ block: "nearest" });
+    const last = logRef.current?.lastElementChild as HTMLElement | null | undefined;
+    if (last && typeof last.scrollIntoView === "function") last.scrollIntoView({ block: "nearest" });
   }, [messages, busy]);
 
   const recorder = useRecorder(async (blob) => {

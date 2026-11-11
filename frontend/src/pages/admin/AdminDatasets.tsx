@@ -48,7 +48,7 @@ export default function AdminDatasets() {
       {q.data && (
         <div className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
           {Object.entries(q.data.summary).map(([k, v]) => (
-            <div key={k} className="rounded-lg border border-line bg-white p-4 shadow-card">
+            <div key={k} className="rounded-lg border border-line bg-surface p-4 shadow-card">
               <p className="text-xs font-medium uppercase tracking-wide text-ink-muted">{k.replace("_", " ")}</p>
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {Object.keys(v).length === 0 && <span className="text-sm text-ink-muted">none</span>}
@@ -76,7 +76,7 @@ export default function AdminDatasets() {
               </Field>
             </div>
             <Field label="File" htmlFor="f" hint="Import order: departments → categories → officers → history.">
-              <input id="f" type="file" accept=".csv,.xlsx" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="block w-full text-sm file:mr-3 file:rounded-md file:border file:border-line file:bg-white file:px-3 file:py-1.5 file:text-sm file:font-medium hover:file:bg-canvas" />
+              <input id="f" type="file" accept=".csv,.xlsx" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="block w-full text-sm file:mr-3 file:rounded-md file:border file:border-line file:bg-surface file:px-3 file:py-1.5 file:text-sm file:font-medium hover:file:bg-canvas" />
             </Field>
             <label className="flex items-start gap-2 text-sm">
               <input type="checkbox" className="mt-0.5 h-4 w-4 accent-brand-800" checked={replace} onChange={(e) => setReplace(e.target.checked)} />

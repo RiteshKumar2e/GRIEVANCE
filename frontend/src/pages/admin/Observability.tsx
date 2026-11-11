@@ -112,7 +112,7 @@ function TracePanel({ traceId }: { traceId: string }) {
         <div className="mb-4">
           <Alert tone="info" title="Public, redacted link">
             <div className="mt-1 flex items-center gap-2">
-              <code className="min-w-0 flex-1 truncate rounded bg-white px-2 py-1 text-xs">{shareUrl}</code>
+              <code className="min-w-0 flex-1 truncate rounded bg-surface px-2 py-1 text-xs">{shareUrl}</code>
               <Button size="sm" variant="secondary" onClick={() => { void navigator.clipboard?.writeText(shareUrl); setCopied(true); setTimeout(() => setCopied(false), 1500); }}>
                 <IconCopy width={14} height={14} /> {copied ? "Copied" : "Copy"}
               </Button>

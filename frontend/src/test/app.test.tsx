@@ -81,16 +81,23 @@ const DRAFT = {
   },
 };
 
-describe("citizen grievance intake", () => {
-  it("requires review and explicit confirmation before submitting", async () => {
+describe("citizen conversational intake", () => {
+  it("asks follow-ups, then requires explicit confirmation before submitting", async () => {
     tokenStore.set("t");
     let confirmBody: Record<string, unknown> | null = null;
+    let turns = 0;
     mockFetch({
       "/auth/me": { body: CITIZEN },
       "/meta/status": { body: STATUS },
       "/meta/categories": { body: [{ code: "WATER_SUPPLY", name_en: "No or irregular water supply", description: "", department_code: "WATER", sla_hours: 48, is_sensitive: false, hide_identity: false, data_source: "SYNTHETIC" }] },
       "/meta/wards": { body: [{ ward: "Ward 2", locality: "Kasba Peth" }] },
-      "/citizen/intake/analyze": { body: DRAFT },
+      "/citizen/intake/converse": (_u, init) => {
+        turns += 1;
+        const body = JSON.parse(String(init?.body));
+        if (turns === 1) return { body: { reply: "Where exactly is this?", ready: false, language: "en", missing: ["location"], draft: null } };
+        expect(body.messages.map((m: { role: string }) => m.role)).toEqual(["user", "assistant", "user"]);
+        return { body: { reply: "Thank you. I have prepared a draft.", ready: true, language: "en", missing: [], draft: DRAFT } };
+      },
       "/citizen/intake/tok123/confirm": (_u, init) => {
         confirmBody = JSON.parse(String(init?.body));
         return { status: 201, body: { public_id: "GRV-2026-123456" } };
@@ -104,19 +111,37 @@ describe("citizen grievance intake", () => {
       </Routes>,
       { route: "/citizen/new" },
     );
-    await user.type(await screen.findByLabelText("Describe the problem"), "No water supply in Kasba Peth for 3 days.");
-    await user.click(screen.getByRole("button", { name: /Analyse my complaint/ }));
+    const box = await screen.findByLabelText("Describe the problem");
+    await user.type(box, "No water supply for 3 days.");
+    await user.click(screen.getByRole("button", { name: /Send/ }));
+    expect(await screen.findByText("Where exactly is this?")).toBeInTheDocument();
 
-    expect(await screen.findByText("Check the details before submitting")).toBeInTheDocument();
-    expect(screen.getByText("Rule-based (no LLM)")).toBeInTheDocument();
+    await user.type(screen.getByLabelText("Describe the problem"), "Kasba Peth");
+    await user.click(screen.getByRole("button", { name: /Send/ }));
+    expect(await screen.findByText("Draft prepared by the assistant")).toBeInTheDocument();
+    expect(screen.getByText("Rule-based analysis (no LLM)")).toBeInTheDocument();
+
     const submit = screen.getByRole("button", { name: /Confirm and submit/ });
     expect(submit).toBeDisabled();
     expect(confirmBody).toBeNull();
-
     await user.click(screen.getByRole("checkbox"));
     expect(submit).toBeEnabled();
     await user.click(submit);
     await waitFor(() => expect(screen.getByText("tracking page")).toBeInTheDocument());
     expect(confirmBody).toMatchObject({ confirmed: true, category_code: "WATER_SUPPLY", ward: "Ward 2" });
+  });
+});
+
+describe("password field", () => {
+  it("toggles visibility with an accessible button", async () => {
+    mockFetch({ "/meta/status": { body: STATUS } });
+    const user = userEvent.setup();
+    renderApp(<App />, { route: "/login" });
+    const pw = await screen.findByLabelText("Password");
+    expect(pw).toHaveAttribute("type", "password");
+    await user.click(screen.getByRole("button", { name: "Show password" }));
+    expect(pw).toHaveAttribute("type", "text");
+    await user.click(screen.getByRole("button", { name: "Hide password" }));
+    expect(pw).toHaveAttribute("type", "password");
   });
 });

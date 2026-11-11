@@ -6,7 +6,7 @@ import { SUPPORT_EMAIL } from "../../lib/meta";
 
 function LegalLayout({ title, updated, children }: { title: string; updated: string; children: ReactNode }) {
   return (
-    <div className="flex min-h-screen flex-col bg-white">
+    <div className="flex min-h-screen flex-col bg-canvas">
       <header className="border-b border-line">
         <div className="mx-auto flex h-16 max-w-3xl items-center justify-between px-4">
           <Logo />
