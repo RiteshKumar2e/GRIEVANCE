@@ -51,6 +51,16 @@ class UserOut(ORM):
     officer_code: str | None = None
     department_code: str | None = None
     department_name: str | None = None
+    designation: str | None = None
+    handles_sensitive: bool | None = None
+    address: str | None = None
+    ward: str | None = None
+    notification_prefs: dict[str, bool] = {}
+    created_at: datetime | None = None
+    last_login_at: datetime | None = None
+    password_changed_at: datetime | None = None
+    permissions: list[str] = []
+    editable_fields: list[str] = []
 
 
 class TokenOut(BaseModel):
@@ -60,10 +70,37 @@ class TokenOut(BaseModel):
     user: UserOut
 
 
+def _strong_password(v: str) -> str:
+    if not (any(c.isdigit() for c in v) and any(c.isalpha() for c in v)):
+        raise ValueError("Password must contain letters and numbers")
+    return v
+
+
 class ProfileUpdate(BaseModel):
+    """Self-service profile edit. Which of these fields a role may change is enforced in api.auth."""
+    model_config = ConfigDict(extra="forbid")
+
     full_name: str | None = Field(default=None, min_length=2, max_length=200)
     phone: str | None = Field(default=None, pattern=r"^\+?[0-9\- ]{7,20}$")
     preferred_language: Lang | None = None
+    address: str | None = Field(default=None, max_length=300)
+    ward: str | None = Field(default=None, max_length=80)
+    notification_prefs: dict[str, bool] | None = None
+
+    @field_validator("full_name", "address", "ward")
+    @classmethod
+    def strip(cls, v: str | None) -> str | None:
+        return v.strip() if isinstance(v, str) else v
+
+
+class PasswordChangeIn(BaseModel):
+    current_password: str = Field(min_length=1, max_length=72)
+    new_password: str = Field(min_length=8, max_length=72)
+
+    @field_validator("new_password")
+    @classmethod
+    def strong(cls, v: str) -> str:
+        return _strong_password(v)
 
 
 # ---------------------------------------------------------------- intake
@@ -205,3 +242,45 @@ class ConverseOut(BaseModel):
     missing: list[str]
     trace_id: str | None = None
     draft: DraftOut | None = None
+
+
+# ---------------------------------------------------------------- administration: users, departments, team
+class UserCreateIn(BaseModel):
+    """System-admin account creation for citizen, dept_admin and admin roles (officers use OfficerCreate)."""
+    email: EmailStr
+    full_name: str = Field(min_length=2, max_length=200)
+    password: str = Field(min_length=8, max_length=72)
+    role: Literal["citizen", "dept_admin", "admin"]
+    department_code: str | None = Field(default=None, max_length=40)
+    phone: str | None = Field(default=None, pattern=r"^\+?[0-9\- ]{7,20}$")
+
+    @field_validator("password")
+    @classmethod
+    def strong(cls, v: str) -> str:
+        return _strong_password(v)
+
+
+class UserAdminUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    is_active: bool | None = None
+    department_code: str | None = Field(default=None, max_length=40)  # only for dept_admin accounts
+
+
+class DepartmentUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str | None = Field(default=None, min_length=2, max_length=200)
+    email: EmailStr | None = None
+    phone: str | None = Field(default=None, pattern=r"^\+?[0-9\- ]{7,20}$")
+    escalation_contact: str | None = Field(default=None, max_length=255)
+    is_active: bool | None = None
+
+
+class TeamOfficerUpdate(BaseModel):
+    """What a department administrator may change about an officer in their own department."""
+    model_config = ConfigDict(extra="forbid")
+
+    is_active: bool | None = None
+    max_active_cases: int | None = Field(default=None, ge=1, le=500)
+    wards: list[str] | None = None

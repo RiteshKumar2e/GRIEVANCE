@@ -6,7 +6,7 @@ from sqlalchemy import case, func, select
 from sqlalchemy.orm import Session
 
 from app.agents import actions, policy
-from app.api.access import get_grievance_for, staff_scope
+from app.api.access import get_grievance_for, staff_department_id, staff_scope
 from app.api.serializers import grievance_detail, grievance_summary
 from app.core.deps import require_officer
 from app.core.errors import DomainError, Forbidden, InvalidTransition, NotFound
@@ -32,6 +32,7 @@ def queue(
     urgency: str | None = None,
     category: str | None = None,
     sla_state: str | None = None,
+    escalated: bool | None = None,
     q: str | None = Query(default=None, max_length=100),
     include_closed: bool = False,
     limit: int = Query(default=100, le=500),
@@ -53,7 +54,9 @@ def queue(
     if category:
         stmt = stmt.join(GrievanceCategory, GrievanceCategory.id == Grievance.category_id).where(GrievanceCategory.code == category)
     if sla_state:
-        stmt = stmt.join(SlaRecord, SlaRecord.grievance_id == Grievance.id).where(SlaRecord.state == sla_state)
+        stmt = stmt.join(SlaRecord, SlaRecord.grievance_id == Grievance.id).where(SlaRecord.state.in_(sla_state.split(",")))
+    if escalated is not None:
+        stmt = stmt.where(Grievance.escalation_level > 0) if escalated else stmt.where(Grievance.escalation_level == 0)
     if q:
         like = f"%{q.strip()}%"
         stmt = stmt.where(Grievance.public_id.ilike(like) | Grievance.title.ilike(like) | Grievance.location_text.ilike(like))
@@ -69,8 +72,15 @@ def stats(user: User = Depends(require_officer), db: Session = Depends(get_db)):
     open_rows = db.execute(select(base.c.id, base.c.sla_due_at, base.c.escalation_level, base.c.assigned_officer_id)
                            .where(base.c.status.in_(OPEN))).all()
     off = user.officer
+    sla_states = dict(db.execute(select(SlaRecord.state, func.count()).join(base, base.c.id == SlaRecord.grievance_id)
+                                 .where(base.c.status.in_(OPEN)).group_by(SlaRecord.state)).all())
     return {
         "by_status": rows,
+        "total": sum(rows.values()),
+        "resolved": rows.get(GrievanceStatus.RESOLVED.value, 0) + rows.get(GrievanceStatus.CLOSED.value, 0),
+        "at_risk": sla_states.get("at_risk", 0),
+        "breached": sla_states.get("breached", 0),
+        "my_capacity": off.max_active_cases if off else None,
         "open": sum(rows.get(s, 0) for s in OPEN),
         "pending_review": rows.get(GrievanceStatus.PENDING_REVIEW.value, 0),
         "overdue": sum(1 for r in open_rows if r.sla_due_at and as_aware(r.sla_due_at) < now),
@@ -117,7 +127,8 @@ def review(public_id: str, body: ReviewDecisionIn, user: User = Depends(require_
         g.sla_due_at, g.policy_explanation = decision.sla_due_at, {**decision.explanation(), "reclassified_by": actor}
         if g.sla_record:
             g.sla_record.due_at, g.sla_record.sla_hours = decision.sla_due_at, decision.sla_hours
-        if user.officer is not None and g.department_id != user.officer.department_id and user.role != "admin":
+        own_dept = staff_department_id(user)
+        if own_dept is not None and g.department_id != own_dept:
             # Reclassified out of this officer's department: hand over to that department's review queue.
             db.add(Assignment(grievance_id=g.id, department_id=g.department_id, actor=actor, actor_type=actor_type,
                               reason=f"Reclassified to {cat.code}: {body.note}"))
@@ -251,3 +262,141 @@ def unlink(public_id: str, other_id: str, body: UnlinkIn, user: User = Depends(r
                  explanation={"unlinked": other.public_id, "note": body.note})
     db.commit()
     return grievance_detail(db, g, user)
+
+
+# ---------------------------------------------------------------- activity, duplicates, reports
+def _iso(dt):
+    dt = as_aware(dt)
+    return dt.isoformat() if dt else None
+
+
+@router.get("/activity")
+def activity(limit: int = Query(default=20, ge=1, le=100), user: User = Depends(require_officer), db: Session = Depends(get_db)):
+    """Recent status changes on grievances this user may see (newest first). Notes are not included."""
+    from app.api.serializers import _actor_label
+    from app.models import StatusHistory
+
+    scoped = staff_scope(select(Grievance.id).where(Grievance.is_historical.is_(False)), user)
+    rows = db.execute(
+        select(StatusHistory, Grievance.public_id, Grievance.title)
+        .join(Grievance, Grievance.id == StatusHistory.grievance_id)
+        .where(StatusHistory.grievance_id.in_(scoped))
+        .order_by(StatusHistory.created_at.desc(), StatusHistory.id.desc()).limit(limit)
+    ).all()
+    return [{"public_id": pid, "title": title, "from_status": h.from_status, "to_status": h.to_status,
+             "actor_type": h.actor_type, "actor_label": _actor_label(db, h.actor, h.actor_type, user), "created_at": _iso(h.created_at)}
+            for h, pid, title in rows]
+
+
+@router.get("/duplicates")
+def duplicate_groups(user: User = Depends(require_officer), db: Session = Depends(get_db)):
+    """Groups of linked reports that include at least one grievance this user may see.
+    Only visible members are listed; every member keeps its own ID and status (nothing is merged)."""
+    from app.models import DuplicateGroup
+
+    visible = {g.id: g for g in db.scalars(staff_scope(
+        select(Grievance).where(Grievance.is_historical.is_(False), Grievance.duplicate_group_id.is_not(None)), user))}
+    group_ids = {g.duplicate_group_id for g in visible.values()}
+    out = []
+    for grp in db.scalars(select(DuplicateGroup).where(DuplicateGroup.id.in_(group_ids)).order_by(DuplicateGroup.created_at.desc())):
+        members = [m for m in grp.members if m.is_active]
+        shown = [m for m in members if m.grievance_id in visible]
+        first = shown[0].grievance if shown else None
+        out.append({
+            "public_id": grp.public_id, "label": grp.label, "ward": grp.ward,
+            "category": first.category.name_en if first is not None and first.category else None,
+            "created_by": grp.created_by, "created_at": _iso(grp.created_at),
+            "member_count": len(members), "hidden_members": len(members) - len(shown),
+            "members": [{"public_id": m.grievance.public_id, "title": m.grievance.title, "status": m.grievance.status,
+                         "ward": m.grievance.ward, "created_at": _iso(m.grievance.created_at), "score": round(m.score or 0.0, 3),
+                         "signals": m.signals, "linked_by": m.linked_by} for m in shown],
+        })
+    return out
+
+
+def _report_rows(db: Session, user: User, days: int, department: str | None):
+    from datetime import timedelta
+
+    from app.models import Department
+
+    since = utcnow() - timedelta(days=days)
+    stmt = staff_scope(select(Grievance).where(Grievance.is_historical.is_(False), Grievance.created_at >= since), user)
+    if department:
+        stmt = stmt.join(Department, Department.id == Grievance.department_id).where(Department.code == department)
+    return since, list(db.scalars(stmt.order_by(Grievance.created_at)))
+
+
+@router.get("/reports")
+def reports(days: int = Query(default=30, ge=7, le=365), department: str | None = Query(default=None, max_length=40),
+            user: User = Depends(require_officer), db: Session = Depends(get_db)):
+    """Aggregates over grievances in this user's scope that were filed in the last `days` days."""
+    since, rows = _report_rows(db, user, days, department)
+    by_status: dict[str, int] = {}
+    by_category: dict[str, int] = {}
+    by_ward: dict[str, int] = {}
+    by_officer: dict[str, dict] = {}
+    by_day: dict[str, dict] = {}
+    met = missed = 0
+    hours: list[float] = []
+    since_day = since.date().isoformat()
+    for g in rows:
+        by_status[g.status] = by_status.get(g.status, 0) + 1
+        cat = g.category.name_en if g.category else "Unclassified"
+        by_category[cat] = by_category.get(cat, 0) + 1
+        ward = g.ward or "Not given"
+        by_ward[ward] = by_ward.get(ward, 0) + 1
+        if g.assigned_officer:
+            o = by_officer.setdefault(g.assigned_officer.code, {"code": g.assigned_officer.code, "name": g.assigned_officer.name,
+                                                               "total": 0, "open": 0, "resolved": 0})
+            o["total"] += 1
+            o["open" if g.status in OPEN else "resolved"] += 1
+        day = as_aware(g.created_at).date().isoformat()
+        by_day.setdefault(day, {"date": day, "filed": 0, "resolved": 0})["filed"] += 1
+        if g.resolved_at:
+            rday = as_aware(g.resolved_at).date().isoformat()
+            if rday >= since_day:
+                by_day.setdefault(rday, {"date": rday, "filed": 0, "resolved": 0})["resolved"] += 1
+            hours.append((as_aware(g.resolved_at) - as_aware(g.created_at)).total_seconds() / 3600)
+            if g.sla_due_at:
+                if as_aware(g.resolved_at) <= as_aware(g.sla_due_at):
+                    met += 1
+                else:
+                    missed += 1
+    hours.sort()
+    return {
+        "days": days, "since": since.isoformat(), "total": len(rows),
+        "by_status": by_status,
+        "by_category": sorted(([k, v] for k, v in by_category.items()), key=lambda x: -x[1]),
+        "by_ward": sorted(([k, v] for k, v in by_ward.items()), key=lambda x: -x[1])[:15],
+        "by_officer": sorted(by_officer.values(), key=lambda x: -x["total"]),
+        "trend": [by_day[k] for k in sorted(by_day)],
+        "sla": {"met": met, "missed": missed, "compliance": round(met / (met + missed), 3) if met + missed else None},
+        "median_resolution_hours": round(hours[len(hours) // 2], 1) if hours else None,
+    }
+
+
+@router.get("/reports/export")
+def export_report(days: int = Query(default=30, ge=7, le=365), department: str | None = Query(default=None, max_length=40),
+                  user: User = Depends(require_officer), db: Session = Depends(get_db)):
+    """CSV of grievances in scope. Contains no citizen identity, description or contact details."""
+    import csv
+    import io
+
+    from fastapi.responses import Response
+
+    _, rows = _report_rows(db, user, days, department)
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["grievance_id", "category", "department", "ward", "urgency", "status", "sensitive", "escalation_level",
+                "assigned_officer", "filed_at", "sla_due_at", "resolved_at", "sla_state"])
+    for g in rows:
+        w.writerow([g.public_id, g.category.code if g.category else "", g.department.code if g.department else "", g.ward or "",
+                    g.urgency, g.status, "yes" if g.is_sensitive else "no", g.escalation_level,
+                    g.assigned_officer.code if g.assigned_officer else "", _iso(g.created_at) or "", _iso(g.sla_due_at) or "",
+                    _iso(g.resolved_at) or "", g.sla_record.state if g.sla_record else ""])
+    actor, actor_type = actor_of(user)
+    audit.record(db, action="report.exported", actor=actor, actor_type=actor_type,
+                 explanation={"days": days, "department": department, "rows": len(rows)})
+    db.commit()
+    name = f"grievance-report-{days}d.csv"
+    return Response(buf.getvalue(), media_type="text/csv", headers={"Content-Disposition": f"attachment; filename={name}"})

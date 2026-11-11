@@ -80,3 +80,26 @@ export async function api<T = unknown>(path: string, opts: Options = {}): Promis
 }
 
 export const apiBase = BASE;
+
+/** Downloads an authenticated file (e.g. a CSV report) and hands it to the browser. */
+export async function downloadFile(path: string, filename: string): Promise<void> {
+  const token = tokenStore.get();
+  let res: Response;
+  try {
+    res = await fetch(`${BASE}${path}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+  } catch {
+    throw new ApiError(0, "Cannot reach the GRIEVANCE server. Check that the backend is running.");
+  }
+  if (!res.ok) {
+    if (res.status === 401 && token) onUnauthorized?.();
+    throw new ApiError(res.status, `Download failed (${res.status})`);
+  }
+  const url = URL.createObjectURL(await res.blob());
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}

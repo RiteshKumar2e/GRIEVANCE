@@ -67,5 +67,12 @@ export function useAuth(): AuthState {
 }
 
 export function homeFor(role: Role): string {
-  return role === "admin" ? "/admin" : role === "officer" ? "/officer" : "/citizen";
+  return { admin: "/admin", dept_admin: "/department", officer: "/officer", citizen: "/citizen" }[role] ?? "/";
 }
+
+export const ROLE_LABEL: Record<Role, string> = {
+  citizen: "Citizen",
+  officer: "Grievance Officer",
+  dept_admin: "Department Admin",
+  admin: "System Admin",
+};

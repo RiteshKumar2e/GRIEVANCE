@@ -23,7 +23,7 @@ from app.models import (
     WebhookDelivery,
 )
 from app.models.enums import OPEN_STATUSES, DataSource, Role
-from app.schemas.api import CategoryUpdate, OfficerCreate, OfficerUpdate, WebhookIn
+from app.schemas.api import CategoryUpdate, DepartmentUpdate, OfficerCreate, OfficerUpdate, UserAdminUpdate, UserCreateIn, WebhookIn
 from app.services import audit, importer
 from app.services.audit import actor_of
 from app.services.webhooks import EVENTS, deliver_pending
@@ -307,3 +307,156 @@ def test_webhook(hid: int, user: User = Depends(require_admin), db: Session = De
     audit.record(db, action="webhook.test", actor=actor, actor_type=actor_type, explanation={"webhook": h.name, "status": d.status})
     db.commit()
     return {"status": d.status, "response_code": d.response_code, "error": d.last_error}
+
+
+# ---------------------------------------------------------------- user management
+def _user_row(u: User, open_cases: dict[int, int]) -> dict:
+    off = u.officer
+    dept = off.department if off and off.department else u.managed_department
+    return {"id": u.id, "email": u.email, "full_name": u.full_name, "phone": u.phone, "role": u.role, "is_active": u.is_active,
+            "department_code": dept.code if dept else None, "department_name": dept.name if dept else None,
+            "officer_code": off.code if off else None, "open_cases": open_cases.get(off.id, 0) if off else None,
+            "data_source": u.data_source, "created_at": _iso(u.created_at), "last_login_at": _iso(u.last_login_at)}
+
+
+@router.get("/users/summary")
+def users_summary(_: User = Depends(require_admin), db: Session = Depends(get_db)):
+    rows = db.execute(select(User.role, User.is_active, func.count()).group_by(User.role, User.is_active)).all()
+    out: dict[str, dict[str, int]] = {}
+    for role, active, n in rows:
+        out.setdefault(role, {"active": 0, "inactive": 0})["active" if active else "inactive"] += n
+    return {"by_role": out, "total": sum(n for *_, n in rows)}
+
+
+@router.get("/users")
+def list_users(
+    role: str | None = Query(default=None, pattern="^(citizen|officer|dept_admin|admin)$"),
+    q: str | None = Query(default=None, max_length=100),
+    active: bool | None = None,
+    limit: int = Query(default=25, ge=1, le=200), offset: int = Query(default=0, ge=0),
+    _: User = Depends(require_admin), db: Session = Depends(get_db),
+):
+    stmt = select(User)
+    if role:
+        stmt = stmt.where(User.role == role)
+    if active is not None:
+        stmt = stmt.where(User.is_active.is_(active))
+    if q:
+        like = f"%{q.strip()}%"
+        stmt = stmt.where(User.email.ilike(like) | User.full_name.ilike(like))
+    total = db.scalar(select(func.count()).select_from(stmt.subquery()))
+    loads = dict(db.execute(select(Grievance.assigned_officer_id, func.count()).where(
+        Grievance.status.in_(OPEN), Grievance.is_historical.is_(False)).group_by(Grievance.assigned_officer_id)).all())
+    users = db.scalars(stmt.order_by(User.created_at.desc(), User.id.desc()).offset(offset).limit(limit)).all()
+    return {"total": total, "items": [_user_row(u, loads) for u in users]}
+
+
+@router.post("/users", status_code=201)
+def create_user(body: UserCreateIn, user: User = Depends(require_admin), db: Session = Depends(get_db)):
+    email = body.email.lower()
+    if db.scalar(select(User).where(User.email == email)):
+        raise HTTPException(409, "An account with this e-mail already exists")
+    dept_id = None
+    if body.role == Role.DEPT_ADMIN.value:
+        d = db.scalar(select(Department).where(Department.code == (body.department_code or "")))
+        if d is None:
+            raise HTTPException(422, "A department administrator needs a valid department")
+        dept_id = d.id
+    elif body.department_code:
+        raise HTTPException(422, "Only department administrators are linked to a department")
+    u = User(email=email, full_name=body.full_name.strip(), phone=body.phone, password_hash=hash_password(body.password),
+             role=body.role, department_id=dept_id, data_source=DataSource.LIVE.value)
+    db.add(u)
+    db.flush()
+    actor, actor_type = actor_of(user)
+    audit.record(db, action="user.created", actor=actor, actor_type=actor_type,
+                 explanation={"user_id": u.id, "role": body.role, "department": body.department_code})
+    db.commit()
+    return {"id": u.id}
+
+
+@router.patch("/users/{uid}")
+def update_user(uid: int, body: UserAdminUpdate, user: User = Depends(require_admin), db: Session = Depends(get_db)):
+    u = db.get(User, uid)
+    if u is None:
+        raise HTTPException(404, "User not found")
+    changes = body.model_dump(exclude_none=True)
+    if not changes:
+        raise HTTPException(422, "Nothing to change")
+    before: dict = {}
+    if "is_active" in changes and changes["is_active"] != u.is_active:
+        if not changes["is_active"]:
+            if u.id == user.id:
+                raise HTTPException(422, "You cannot deactivate your own account")
+            if u.role == Role.ADMIN.value:
+                admins = db.scalar(select(func.count()).select_from(User).where(User.role == Role.ADMIN.value, User.is_active.is_(True)))
+                if admins <= 1:
+                    raise HTTPException(422, "At least one active system administrator is required")
+            if u.officer is not None:
+                held = db.scalar(select(func.count()).select_from(Grievance).where(
+                    Grievance.assigned_officer_id == u.officer.id, Grievance.status.in_(OPEN)))
+                if held:
+                    raise HTTPException(422, f"This officer still holds {held} open case(s). Reassign them first.")
+        before["is_active"] = u.is_active
+        u.is_active = changes["is_active"]
+        if u.officer is not None:
+            u.officer.is_active = u.is_active
+    if "department_code" in changes:
+        if u.role != Role.DEPT_ADMIN.value:
+            raise HTTPException(422, "Only department administrators are linked to a department")
+        d = db.scalar(select(Department).where(Department.code == changes["department_code"]))
+        if d is None:
+            raise HTTPException(404, "Department not found")
+        before["department_id"] = u.department_id
+        u.department_id = d.id
+    actor, actor_type = actor_of(user)
+    audit.record(db, action="user.updated", actor=actor, actor_type=actor_type,
+                 explanation={"user_id": u.id, "before": before, "after": changes})
+    db.commit()
+    return {"ok": True}
+
+
+# ---------------------------------------------------------------- department records
+@router.patch("/departments/{code}")
+def update_department(code: str, body: DepartmentUpdate, user: User = Depends(require_admin), db: Session = Depends(get_db)):
+    d = db.scalar(select(Department).where(Department.code == code))
+    if d is None:
+        raise HTTPException(404, "Department not found")
+    changes = body.model_dump(exclude_none=True)
+    if not changes:
+        raise HTTPException(422, "Nothing to change")
+    if changes.get("is_active") is False:
+        open_n = db.scalar(select(func.count()).select_from(Grievance).where(Grievance.department_id == d.id, Grievance.status.in_(OPEN)))
+        cats = db.scalar(select(func.count()).select_from(GrievanceCategory).where(
+            GrievanceCategory.department_id == d.id, GrievanceCategory.is_active.is_(True)))
+        if open_n or cats:
+            raise HTTPException(422, f"Department has {open_n} open grievance(s) and {cats} active categor(ies). Move them first.")
+    before = {k: getattr(d, k) for k in changes}
+    for k, v in changes.items():
+        setattr(d, k, v)
+    actor, actor_type = actor_of(user)
+    audit.record(db, action="department.updated", actor=actor, actor_type=actor_type,
+                 explanation={"department": code, "before": before, "after": changes})
+    db.commit()
+    return {"ok": True}
+
+
+# ---------------------------------------------------------------- runtime settings (read-only, no secrets)
+@router.get("/settings")
+def runtime_settings(_: User = Depends(require_admin)):
+    s = get_settings()
+    return {
+        "environment": s.app_env,
+        "policy": {"default_confidence_threshold": s.default_confidence_threshold, "duplicate_threshold": s.duplicate_threshold,
+                   "duplicate_window_days": s.duplicate_window_days, "duplicate_radius_km": s.duplicate_radius_km,
+                   "sla_warning_fraction": s.sla_warning_fraction, "auto_close_after_days": s.auto_close_after_days},
+        "jobs": {"sla_scan_interval_seconds": s.sla_scan_interval_seconds},
+        "limits": {"max_grievances_per_day": s.max_grievances_per_day, "max_drafts_per_day": s.max_drafts_per_day,
+                   "max_upload_mb": s.max_upload_mb, "session_minutes": s.jwt_expire_minutes},
+        "security": {"enforce_https": s.enforce_https, "cors_origins": s.cors_origin_list,
+                     "jwt_secret_is_default": s.jwt_secret.startswith(("dev-", "change-me")),
+                     "webhook_secret_is_default": s.webhook_signing_secret.startswith("dev-")},
+        "providers": {"groq_configured": s.groq_enabled, "gemini_configured": s.gemini_enabled,
+                      "langfuse_configured": s.langfuse_enabled, "data_gov_in_key_configured": bool(s.data_gov_in_api_key),
+                      "embedding_provider": s.embedding_provider, "stt_provider": s.stt_provider},
+    }

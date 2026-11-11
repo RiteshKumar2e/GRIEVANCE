@@ -15,7 +15,7 @@ from app.agents.orchestrator import auto_close, run_pipeline, sla_scan
 from app.core.config import BACKEND_DIR, get_settings
 from app.core.security import hash_password
 from app.core.time import as_aware, utcnow
-from app.models import Grievance, Officer, User
+from app.models import Department, Grievance, Officer, User
 from app.models.enums import ActorType, DataSource, GrievanceStatus, Role
 from app.services import geo, importer
 from app.services.grievances import new_public_id, record_initial_status, transition
@@ -27,6 +27,11 @@ DEMO_USERS = [
     ("admin@example.org", "Demo Administrator", Role.ADMIN),
     ("citizen@example.org", "Demo Citizen", Role.CITIZEN),
     ("citizen2@example.org", "Second Demo Citizen", Role.CITIZEN),
+]
+# Department administrators: (email, name, department code). Created only if the department exists.
+DEMO_DEPT_ADMINS = [
+    ("deptadmin.water@example.org", "Demo Water Department Admin", "WATER"),
+    ("deptadmin.roads@example.org", "Demo Roads Department Admin", "ROADS"),
 ]
 
 OPEN_DEMO = [
@@ -77,6 +82,11 @@ def seed_users(db: Session) -> None:
     for email, name, role in DEMO_USERS:
         if db.scalar(select(User).where(User.email == email)) is None:
             db.add(User(email=email, full_name=name, role=role.value, password_hash=pw, phone="+91-9000000000",
+                        data_source=DataSource.SYNTHETIC.value))
+    for email, name, dept_code in DEMO_DEPT_ADMINS:
+        dept = db.scalar(select(Department).where(Department.code == dept_code))
+        if dept is not None and db.scalar(select(User).where(User.email == email)) is None:
+            db.add(User(email=email, full_name=name, role=Role.DEPT_ADMIN.value, password_hash=pw, department_id=dept.id,
                         data_source=DataSource.SYNTHETIC.value))
     db.commit()
 

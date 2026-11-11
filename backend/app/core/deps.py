@@ -50,5 +50,7 @@ def require_roles(*roles: Role) -> Callable[..., User]:
 
 
 require_citizen = require_roles(Role.CITIZEN)
-require_officer = require_roles(Role.OFFICER, Role.ADMIN)
+# Case work (queues, review, status, reassignment). Object-level scope is enforced in app.api.access.
+require_officer = require_roles(Role.OFFICER, Role.DEPT_ADMIN, Role.ADMIN)
+require_dept_admin = require_roles(Role.DEPT_ADMIN, Role.ADMIN)
 require_admin = require_roles(Role.ADMIN)

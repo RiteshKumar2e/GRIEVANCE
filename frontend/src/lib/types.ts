@@ -1,4 +1,4 @@
-export type Role = "citizen" | "officer" | "admin";
+export type Role = "citizen" | "officer" | "dept_admin" | "admin";
 export type Lang = "en" | "hi" | "mr";
 export type Status = "SUBMITTED" | "PENDING_REVIEW" | "ASSIGNED" | "IN_PROGRESS" | "RESOLVED" | "CLOSED" | "REOPENED";
 export type Urgency = "low" | "medium" | "high" | "critical";
@@ -13,6 +13,16 @@ export interface User {
   officer_code?: string | null;
   department_code?: string | null;
   department_name?: string | null;
+  designation?: string | null;
+  handles_sensitive?: boolean | null;
+  address?: string | null;
+  ward?: string | null;
+  notification_prefs?: Record<string, boolean>;
+  created_at?: string | null;
+  last_login_at?: string | null;
+  password_changed_at?: string | null;
+  permissions?: string[];
+  editable_fields?: string[];
 }
 
 export interface TokenResponse {
@@ -64,6 +74,8 @@ export interface GrievanceSummary {
   updated_at: string;
   resolved_at: string | null;
   sla: Sla | null;
+  /** Staff lists only; masked or hidden according to the viewer's permissions. */
+  citizen?: { name: string; phone: string | null; email: string | null; protected?: boolean } | null;
 }
 
 export interface HistoryItem {

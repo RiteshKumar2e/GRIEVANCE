@@ -18,7 +18,7 @@ from app.models import (
     StatusHistory,
     User,
 )
-from app.models.enums import Role
+from app.models.enums import STAFF_ROLES, Role
 
 
 def _iso(dt):
@@ -69,6 +69,8 @@ def grievance_summary(g: Grievance, viewer: User) -> dict[str, Any]:
         "data_source": g.data_source, "is_historical": g.is_historical,
         "created_at": _iso(g.created_at), "updated_at": _iso(g.updated_at), "resolved_at": _iso(g.resolved_at),
         "sla": sla_view(g),
+        # Staff lists show the same masked identity as the case view (hidden entirely for sensitive cases).
+        **({"citizen": citizen_identity(g, viewer)} if viewer.role in STAFF_ROLES else {}),
     }
 
 
@@ -80,13 +82,13 @@ def citizen_identity(g: Grievance, viewer: User) -> dict[str, Any] | None:
         return {"name": c.full_name, "phone": c.phone, "email": c.email} if c.id == viewer.id else None
     if g.identity_hidden:
         return {"name": PROTECTED_NAME, "phone": None, "email": None, "protected": True}
-    return {"name": mask_name(c.full_name) if viewer.role == Role.OFFICER.value else c.full_name,
+    return {"name": c.full_name if viewer.role == Role.ADMIN.value else mask_name(c.full_name),
             "phone": mask_phone(c.phone), "email": None, "protected": False}
 
 
 def grievance_detail(db: Session, g: Grievance, viewer: User) -> dict[str, Any]:
     data = grievance_summary(g, viewer)
-    is_staff = viewer.role in (Role.OFFICER.value, Role.ADMIN.value)
+    is_staff = viewer.role in STAFF_ROLES
     data.update({
         "description": g.description, "input_mode": g.input_mode, "latitude": g.latitude, "longitude": g.longitude,
         "resolution_summary": g.resolution_summary, "citizen_feedback": g.citizen_feedback, "citizen_rating": g.citizen_rating,

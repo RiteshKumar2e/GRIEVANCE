@@ -17,7 +17,8 @@ class AuditIncomplete(ValueError):
 def actor_of(user: User | None) -> tuple[str, str]:
     if user is None:
         return "SYSTEM", ActorType.SYSTEM.value
-    kind = {Role.CITIZEN.value: ActorType.CITIZEN, Role.OFFICER.value: ActorType.OFFICER, Role.ADMIN.value: ActorType.ADMIN}[user.role]
+    kind = {Role.CITIZEN.value: ActorType.CITIZEN, Role.OFFICER.value: ActorType.OFFICER,
+            Role.DEPT_ADMIN.value: ActorType.DEPT_ADMIN, Role.ADMIN.value: ActorType.ADMIN}[user.role]
     return f"user:{user.id}", kind.value
 
 

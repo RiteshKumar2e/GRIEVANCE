@@ -9,7 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from app.api import admin, analytics, auth, citizen, external, meta, mock, observability, officer
+from app.api import admin, analytics, auth, citizen, department, external, meta, mock, observability, officer
 from app.core.config import get_settings
 from app.core.errors import install_handlers
 from app.db.session import SessionLocal, get_engine
@@ -98,7 +98,7 @@ def create_app() -> FastAPI:
     app.add_middleware(CORSMiddleware, allow_origins=s.cors_origin_list, allow_credentials=False,
                        allow_methods=["GET", "POST", "PATCH", "DELETE"], allow_headers=["Authorization", "Content-Type"])
     install_handlers(app)
-    for r in (auth.router, meta.router, citizen.router, citizen.notif_router, officer.router, admin.router,
+    for r in (auth.router, meta.router, citizen.router, citizen.notif_router, officer.router, department.router, admin.router,
               analytics.router, observability.router, observability.public_router, mock.router, external.router):
         app.include_router(r, prefix=API)
 

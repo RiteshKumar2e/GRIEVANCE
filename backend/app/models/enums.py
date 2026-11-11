@@ -9,7 +9,11 @@ class StrEnum(str, Enum):
 class Role(StrEnum):
     CITIZEN = "citizen"
     OFFICER = "officer"
-    ADMIN = "admin"
+    DEPT_ADMIN = "dept_admin"   # manages one department (users.department_id)
+    ADMIN = "admin"             # system administrator
+
+
+STAFF_ROLES = {Role.OFFICER.value, Role.DEPT_ADMIN.value, Role.ADMIN.value}
 
 
 class DataSource(StrEnum):
@@ -48,6 +52,7 @@ class ActorType(StrEnum):
     AI = "AI_SYSTEM"
     CITIZEN = "CITIZEN"
     OFFICER = "OFFICER"
+    DEPT_ADMIN = "DEPT_ADMIN"
     ADMIN = "ADMIN"
     SYSTEM = "SYSTEM"  # deterministic scheduled jobs that are not AI decisions
 

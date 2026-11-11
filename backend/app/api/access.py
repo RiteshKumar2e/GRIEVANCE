@@ -1,4 +1,12 @@
-"""Object-level authorization for grievances."""
+"""Object-level authorization for grievances.
+
+    admin       everything
+    dept_admin  every grievance of the department in users.department_id (including sensitive ones,
+                which they must approve and assign; identities stay hidden by the serializer)
+    officer     grievances assigned to them, plus their department's non-sensitive grievances
+                (sensitive ones only when the officer is authorised for sensitive cases)
+    citizen     only their own grievances
+"""
 from __future__ import annotations
 
 from sqlalchemy import Select, or_, select
@@ -9,12 +17,23 @@ from app.models import Grievance, User
 from app.models.enums import Role
 
 
+def staff_department_id(user: User) -> int | None:
+    """The department a staff member works in (None for system admins and citizens)."""
+    if user.role == Role.DEPT_ADMIN.value:
+        return user.department_id
+    if user.role == Role.OFFICER.value and user.officer is not None:
+        return user.officer.department_id
+    return None
+
+
 def staff_scope(q: Select, user: User) -> Select:
-    """Restrict a grievance query to what this officer may see (admins see everything)."""
+    """Restrict a grievance query to what this staff member may see."""
     if user.role == Role.ADMIN.value:
         return q
+    if user.role == Role.DEPT_ADMIN.value:
+        return q.where(Grievance.department_id == user.department_id) if user.department_id else q.where(Grievance.id == -1)
     off = user.officer
-    if off is None:
+    if user.role != Role.OFFICER.value or off is None:
         return q.where(Grievance.id == -1)
     visible = or_(Grievance.assigned_officer_id == off.id, Grievance.department_id == off.department_id)
     q = q.where(visible)
@@ -28,8 +47,10 @@ def can_view(user: User, g: Grievance) -> bool:
         return True
     if user.role == Role.CITIZEN.value:
         return g.citizen_id == user.id
+    if user.role == Role.DEPT_ADMIN.value:
+        return user.department_id is not None and g.department_id == user.department_id
     off = user.officer
-    if off is None:
+    if user.role != Role.OFFICER.value or off is None:
         return False
     if g.assigned_officer_id == off.id:
         return True

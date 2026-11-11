@@ -23,8 +23,17 @@ class User(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     data_source: Mapped[str] = mapped_column(String(16), default="LIVE")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    # Department managed by a department administrator (role dept_admin); null for every other role.
+    department_id: Mapped[int | None] = mapped_column(ForeignKey("departments.id"), nullable=True, index=True)
+    address: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    ward: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    # {"status_updates": bool, "sla_alerts": bool, "escalations": bool}; missing keys mean "on".
+    notification_prefs: Mapped[dict] = mapped_column(JSON, default=dict)
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    password_changed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     officer: Mapped["Officer | None"] = relationship(back_populates="user", uselist=False)
+    managed_department: Mapped["Department | None"] = relationship(foreign_keys=[department_id])
 
 
 class Department(Base):

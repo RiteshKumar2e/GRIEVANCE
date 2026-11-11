@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { caseHref } from "../components/nav";
 import { Button, EmptyState, ErrorState, PageHeader, SkeletonRows, Tabs } from "../components/ui";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
@@ -18,7 +19,6 @@ export default function Notifications() {
     queryKey: ["notifications", "page", filter],
     queryFn: () => api<{ unread: number; items: Notification[] }>(`/notifications?limit=200${filter === "unread" ? "&unread=true" : ""}`),
   });
-  const base = user?.role === "citizen" ? "/citizen/grievances" : "/officer/grievances";
   const markAll = async () => {
     await api("/notifications/read-all", { method: "POST" });
     void qc.invalidateQueries({ queryKey: ["notifications"] });
@@ -30,9 +30,10 @@ export default function Notifications() {
   };
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="max-w-4xl">
       <PageHeader
         title={user?.role === "citizen" ? t("notifications") : "Notifications"}
+        subtitle="Updates about grievances you filed or handle. Read and unread states are saved to your account."
         actions={
           <>
             <Tabs value={filter} onChange={setFilter} items={[{ value: "all", label: "All" }, { value: "unread", label: `Unread${q.data ? ` (${q.data.unread})` : ""}` }]} />
@@ -58,7 +59,7 @@ export default function Notifications() {
                     {n.grievance_id && (
                       <>
                         {" · "}
-                        <Link to={`${base}/${n.grievance_id}`} onClick={() => markOne(n)} className="font-medium text-brand-700 hover:underline">
+                        <Link to={caseHref(user!.role, n.grievance_id)} onClick={() => markOne(n)} className="font-medium text-brand-700 hover:underline">
                           Open {n.grievance_id}
                         </Link>
                       </>
