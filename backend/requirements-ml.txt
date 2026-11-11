@@ -1,0 +1,6 @@
+# Optional local-model dependencies (large downloads).
+# Without these the backend still runs: embeddings fall back to a deterministic
+# hashing embedder and voice transcription returns a clear "unavailable" error.
+-r requirements.txt
+sentence-transformers>=3.0     # multilingual embeddings (paraphrase-multilingual-MiniLM-L12-v2)
+faster-whisper>=1.0            # Whisper speech-to-text (Hindi / Marathi / English)

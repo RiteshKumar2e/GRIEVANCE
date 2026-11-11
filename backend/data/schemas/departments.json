@@ -1,0 +1,15 @@
+{
+  "kind": "departments",
+  "description": "Department Directory.",
+  "key": "code",
+  "columns": {
+    "code":               {"aliases": ["department_code", "code", "dept_code"], "required": true},
+    "name":               {"aliases": ["name", "department_name", "department"], "required": true},
+    "name_hi":            {"aliases": ["name_hi"]},
+    "name_mr":            {"aliases": ["name_mr"]},
+    "email":              {"aliases": ["email", "department_email"]},
+    "phone":              {"aliases": ["phone", "contact"]},
+    "head_officer_code":  {"aliases": ["head_officer_code", "head_officer", "hod"]},
+    "escalation_contact": {"aliases": ["escalation_contact", "escalation_email"]}
+  }
+}

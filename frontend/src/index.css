@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+  html {
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    @apply bg-canvas font-sans text-ink;
+  }
+  :lang(hi),
+  :lang(mr) {
+    line-height: 1.7;
+  }
+}
+
+.recharts-cartesian-axis-tick-value {
+  fill: #6b7180;
+  font-size: 11px;
+}

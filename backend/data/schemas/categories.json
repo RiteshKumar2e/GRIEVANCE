@@ -1,0 +1,22 @@
+{
+  "kind": "categories",
+  "description": "Grievance Category Master. Controls department mapping, SLA, sensitivity, identity hiding and confidence thresholds.",
+  "key": "code",
+  "columns": {
+    "code":                 {"aliases": ["category_code", "code", "category id", "category_id"], "required": true},
+    "name_en":              {"aliases": ["name_en", "category_name", "name", "category"], "required": true},
+    "name_hi":              {"aliases": ["name_hi", "hindi_name"]},
+    "name_mr":              {"aliases": ["name_mr", "marathi_name"]},
+    "department_code":      {"aliases": ["department_code", "department", "dept_code"], "required": true},
+    "sla_hours":            {"aliases": ["sla_hours", "sla", "sla_hrs"], "type": "int", "default": 72},
+    "is_sensitive":         {"aliases": ["is_sensitive", "sensitive", "sensitive_flag"], "type": "bool", "default": false},
+    "hide_identity":        {"aliases": ["hide_identity", "identity_hiding", "identity_hidden", "anonymous"], "type": "bool", "default": false},
+    "confidence_threshold": {"aliases": ["confidence_threshold", "threshold", "min_confidence"], "type": "float", "default": 0.7},
+    "auto_close_allowed":   {"aliases": ["auto_close_allowed", "auto_close"], "type": "bool", "default": true},
+    "default_urgency":      {"aliases": ["default_urgency", "urgency", "priority"], "default": "medium"},
+    "description":          {"aliases": ["description", "details"], "default": ""},
+    "keywords_en":          {"aliases": ["keywords_en", "keywords"], "type": "list"},
+    "keywords_hi":          {"aliases": ["keywords_hi"], "type": "list"},
+    "keywords_mr":          {"aliases": ["keywords_mr"], "type": "list"}
+  }
+}

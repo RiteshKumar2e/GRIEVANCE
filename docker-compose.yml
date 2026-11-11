@@ -1,0 +1,52 @@
+name: grievance
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: grievance
+      POSTGRES_PASSWORD: grievance
+      POSTGRES_DB: grievance
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U grievance -d grievance"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  backend:
+    build:
+      context: ./backend
+      args:
+        INSTALL_ML: "false"   # set "true" to bake sentence-transformers + faster-whisper into the image
+    env_file:
+      - ./backend/.env
+    environment:
+      # Override the host-oriented URL from backend/.env with the compose service name.
+      DATABASE_URL: postgresql+psycopg://grievance:grievance@db:5432/grievance
+      CORS_ORIGINS: http://localhost:5173,http://localhost:8080
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    volumes:
+      - uploads:/app/uploads
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE_URL: http://localhost:8000/api/v1
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+
+volumes:
+  pgdata:
+  uploads:

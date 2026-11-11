@@ -1,0 +1,24 @@
+{
+  "kind": "grievance_history",
+  "description": "Historical (mock) grievances. Used for RAG precedents, duplicate detection, recurrence analysis and SLA prediction.",
+  "key": "external_ref",
+  "columns": {
+    "external_ref":       {"aliases": ["grievance_ref", "grievance_id", "external_ref", "id", "ref"], "required": true},
+    "title":              {"aliases": ["title", "subject"]},
+    "description":        {"aliases": ["description", "complaint", "complaint_text", "text"], "required": true},
+    "language":           {"aliases": ["language", "lang"], "default": "en"},
+    "category_code":      {"aliases": ["category_code", "category"], "required": true},
+    "department_code":    {"aliases": ["department_code", "department"]},
+    "ward":               {"aliases": ["ward", "ward_no", "zone"]},
+    "location_text":      {"aliases": ["location", "location_text", "address", "area"]},
+    "latitude":           {"aliases": ["latitude", "lat"], "type": "float"},
+    "longitude":          {"aliases": ["longitude", "lon", "lng"], "type": "float"},
+    "urgency":            {"aliases": ["urgency", "priority"], "default": "medium"},
+    "status":             {"aliases": ["status"], "default": "CLOSED"},
+    "created_at":         {"aliases": ["created_at", "submitted_at", "date", "filed_on"], "type": "datetime", "required": true},
+    "resolved_at":        {"aliases": ["resolved_at", "closed_at", "resolution_date"], "type": "datetime"},
+    "resolution_summary": {"aliases": ["resolution_summary", "resolution", "action_taken"]},
+    "officer_code":       {"aliases": ["officer_code", "officer", "assigned_officer"]},
+    "citizen_rating":     {"aliases": ["citizen_rating", "rating", "feedback_score"], "type": "int"}
+  }
+}

@@ -1,0 +1,30 @@
+officer_code,name,department_code,designation,email,phone,wards,max_active_cases,handles_sensitive
+OFF-WATER-01,Swati Gupta,WATER,Executive Engineer,officer.water@example.org,+91-9000055272,,30,false
+OFF-WATER-02,Sneha Sharma,WATER,Junior Engineer,off-water-02@example.org,+91-9000072170,Ward 2|Ward 3|Ward 6|Ward 7|Ward 8|Ward 12,20,false
+OFF-WATER-03,Ganesh Gupta,WATER,Junior Engineer,off-water-03@example.org,+91-9000082785,Ward 1|Ward 3|Ward 5|Ward 6|Ward 8|Ward 11,20,false
+OFF-ROADS-01,Kavita Deshmukh,ROADS,Executive Engineer,officer.roads@example.org,+91-9000093076,,30,false
+OFF-ROADS-02,Anjali Kulkarni,ROADS,Junior Engineer,off-roads-02@example.org,+91-9000057541,Ward 1|Ward 2|Ward 4|Ward 6|Ward 8|Ward 10,20,false
+OFF-ROADS-03,Varsha Gaikwad,ROADS,Junior Engineer,off-roads-03@example.org,+91-9000071402,Ward 4|Ward 5|Ward 7|Ward 9|Ward 11|Ward 12,20,false
+OFF-SWM-01,Sunita Mishra,SWM,Executive Engineer,officer.swm@example.org,+91-9000099978,,30,false
+OFF-SWM-02,Amit Gaikwad,SWM,Ward Officer,off-swm-02@example.org,+91-9000074369,Ward 3|Ward 4|Ward 7|Ward 9|Ward 10|Ward 12,20,false
+OFF-SWM-03,Neha Mishra,SWM,Ward Officer,off-swm-03@example.org,+91-9000062774,Ward 1|Ward 3|Ward 4|Ward 5|Ward 7|Ward 10,20,false
+OFF-ELEC-01,Pooja Kulkarni,ELEC,Executive Engineer,off-elec-01@example.org,+91-9000045028,,30,false
+OFF-ELEC-02,Manoj Pawar,ELEC,Junior Engineer,off-elec-02@example.org,+91-9000074709,Ward 1|Ward 2|Ward 6|Ward 7|Ward 8|Ward 11,20,false
+OFF-ELEC-03,Anjali Jadhav,ELEC,Junior Engineer,off-elec-03@example.org,+91-9000098370,Ward 4|Ward 6|Ward 7|Ward 8|Ward 10|Ward 11,20,false
+OFF-DRAIN-01,Suresh Patil,DRAIN,Executive Engineer,off-drain-01@example.org,+91-9000042548,,30,false
+OFF-DRAIN-02,Kavita Verma,DRAIN,Junior Engineer,off-drain-02@example.org,+91-9000063179,Ward 1|Ward 5|Ward 6|Ward 8|Ward 9|Ward 12,20,false
+OFF-DRAIN-03,Manoj Gupta,DRAIN,Junior Engineer,off-drain-03@example.org,+91-9000047211,Ward 2|Ward 3|Ward 4|Ward 5|Ward 9|Ward 11,20,false
+OFF-HEALTH-01,Deepak Bhosale,HEALTH,Executive Engineer,off-health-01@example.org,+91-9000017643,,30,false
+OFF-HEALTH-02,Sachin Gupta,HEALTH,Ward Officer,off-health-02@example.org,+91-9000023859,Ward 1|Ward 2|Ward 6|Ward 8|Ward 11|Ward 12,20,false
+OFF-REVENUE-01,Mahesh Verma,REVENUE,Executive Engineer,off-revenue-01@example.org,+91-9000070440,,30,false
+OFF-REVENUE-02,Amit More,REVENUE,Ward Officer,off-revenue-02@example.org,+91-9000081558,Ward 2|Ward 3|Ward 5|Ward 6|Ward 8|Ward 9,20,false
+OFF-TOWNPLAN-01,Prakash Gupta,TOWNPLAN,Executive Engineer,off-townplan-01@example.org,+91-9000046894,,30,false
+OFF-TOWNPLAN-02,Amit Gupta,TOWNPLAN,Ward Officer,off-townplan-02@example.org,+91-9000053353,Ward 2|Ward 5|Ward 7|Ward 8|Ward 9|Ward 10,20,false
+OFF-TRANSPORT-01,Neha Shinde,TRANSPORT,Executive Engineer,off-transport-01@example.org,+91-9000079289,,30,false
+OFF-TRANSPORT-02,Manoj Sharma,TRANSPORT,Ward Officer,off-transport-02@example.org,+91-9000034285,Ward 1|Ward 3|Ward 4|Ward 6|Ward 10|Ward 11,20,false
+OFF-VIGILANCE-01,Varsha Shinde,VIGILANCE,Executive Engineer,off-vigilance-01@example.org,+91-9000063428,,30,true
+OFF-VIGILANCE-02,Shalini Gaikwad,VIGILANCE,Ward Officer,off-vigilance-02@example.org,+91-9000078766,Ward 1|Ward 3|Ward 5|Ward 9|Ward 10|Ward 12,20,true
+OFF-SAFETY-01,Sneha More,SAFETY,Executive Engineer,officer.safety@example.org,+91-9000050235,,30,true
+OFF-SAFETY-02,Mahesh Shinde,SAFETY,Ward Officer,off-safety-02@example.org,+91-9000089836,Ward 1|Ward 4|Ward 5|Ward 6|Ward 9|Ward 11,20,true
+OFF-GENERAL-01,Suresh Deshmukh,GENERAL,Executive Engineer,off-general-01@example.org,+91-9000093533,,30,false
+OFF-GENERAL-02,Manoj Shinde,GENERAL,Ward Officer,off-general-02@example.org,+91-9000051507,Ward 4|Ward 6|Ward 8|Ward 9|Ward 10|Ward 12,20,false

@@ -1,0 +1,16 @@
+{
+  "kind": "officers",
+  "description": "Officers belonging to the Department Directory.",
+  "key": "code",
+  "columns": {
+    "code":              {"aliases": ["officer_code", "code", "officer_id", "employee_id"], "required": true},
+    "name":              {"aliases": ["name", "officer_name"], "required": true},
+    "department_code":   {"aliases": ["department_code", "department", "dept_code"], "required": true},
+    "designation":       {"aliases": ["designation", "role", "post"], "default": "Officer"},
+    "email":             {"aliases": ["email", "officer_email"]},
+    "phone":             {"aliases": ["phone", "mobile"]},
+    "wards":             {"aliases": ["wards", "ward_coverage", "jurisdiction"], "type": "list"},
+    "max_active_cases":  {"aliases": ["max_active_cases", "capacity"], "type": "int", "default": 25},
+    "handles_sensitive": {"aliases": ["handles_sensitive", "sensitive_handler"], "type": "bool", "default": false}
+  }
+}

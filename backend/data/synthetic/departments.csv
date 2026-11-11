@@ -1,0 +1,13 @@
+department_code,name,name_hi,name_mr,email,phone,head_officer_code,escalation_contact
+WATER,Water Supply Department,जल आपूर्ति विभाग,पाणीपुरवठा विभाग,water@democity.example.org,+91-20-25500001,OFF-WATER-01,commissioner.office@democity.example.org
+ROADS,Roads & Public Works,सड़क एवं लोक निर्माण विभाग,रस्ते व सार्वजनिक बांधकाम विभाग,roads@democity.example.org,+91-20-25500002,OFF-ROADS-01,commissioner.office@democity.example.org
+SWM,Solid Waste Management,ठोस अपशिष्ट प्रबंधन विभाग,घनकचरा व्यवस्थापन विभाग,swm@democity.example.org,+91-20-25500003,OFF-SWM-01,commissioner.office@democity.example.org
+ELEC,Electricity & Street Lighting,विद्युत एवं स्ट्रीट लाइट विभाग,वीज व पथदिवे विभाग,elec@democity.example.org,+91-20-25500004,OFF-ELEC-01,commissioner.office@democity.example.org
+DRAIN,Drainage & Sewerage,जल निकासी एवं सीवरेज विभाग,मलनिःसारण विभाग,drain@democity.example.org,+91-20-25500005,OFF-DRAIN-01,commissioner.office@democity.example.org
+HEALTH,Public Health,जन स्वास्थ्य विभाग,सार्वजनिक आरोग्य विभाग,health@democity.example.org,+91-20-25500006,OFF-HEALTH-01,commissioner.office@democity.example.org
+REVENUE,Revenue & Property Tax,राजस्व एवं संपत्ति कर विभाग,महसूल व मालमत्ता कर विभाग,revenue@democity.example.org,+91-20-25500007,OFF-REVENUE-01,commissioner.office@democity.example.org
+TOWNPLAN,Town Planning & Encroachment,नगर नियोजन एवं अतिक्रमण विभाग,नगररचना व अतिक्रमण विभाग,townplan@democity.example.org,+91-20-25500008,OFF-TOWNPLAN-01,commissioner.office@democity.example.org
+TRANSPORT,Public Transport,सार्वजनिक परिवहन विभाग,सार्वजनिक वाहतूक विभाग,transport@democity.example.org,+91-20-25500009,OFF-TRANSPORT-01,commissioner.office@democity.example.org
+VIGILANCE,Vigilance & Anti-Corruption Cell,सतर्कता एवं भ्रष्टाचार निरोधक प्रकोष्ठ,दक्षता व भ्रष्टाचार प्रतिबंधक कक्ष,vigilance@democity.example.org,+91-20-25500010,OFF-VIGILANCE-01,commissioner.office@democity.example.org
+SAFETY,Women & Child Safety Cell,महिला एवं बाल सुरक्षा प्रकोष्ठ,महिला व बाल सुरक्षा कक्ष,safety@democity.example.org,+91-20-25500011,OFF-SAFETY-01,commissioner.office@democity.example.org
+GENERAL,Citizen Facilitation Centre,नागरिक सुविधा केंद्र,नागरिक सुविधा केंद्र,general@democity.example.org,+91-20-25500012,OFF-GENERAL-01,commissioner.office@democity.example.org
