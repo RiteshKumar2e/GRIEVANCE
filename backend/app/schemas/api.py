@@ -21,6 +21,7 @@ class RegisterIn(BaseModel):
     password: str = Field(min_length=8, max_length=72)
     phone: str | None = Field(default=None, pattern=r"^\+?[0-9\- ]{7,20}$")
     preferred_language: Lang = "en"
+    website: str | None = Field(default=None, max_length=200)  # honeypot: humans never fill this
 
     @field_validator("password")
     @classmethod

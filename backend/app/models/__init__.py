@@ -16,6 +16,7 @@ from app.models.system import (
     DatasetImport,
     IntakeDraft,
     Notification,
+    PageView,
     Webhook,
     WebhookDelivery,
 )
@@ -23,6 +24,6 @@ from app.models.system import (
 __all__ = [
     "AgentRun", "AgentTrace", "Assignment", "AuditEvent", "DatasetImport", "Department",
     "DuplicateGroup", "DuplicateGroupMember", "Grievance", "GrievanceCategory", "IntakeDraft",
-    "Notification", "Officer", "OfficerNote", "RetrievedPrecedent", "SlaRecord", "StatusHistory",
+    "Notification", "Officer", "PageView", "OfficerNote", "RetrievedPrecedent", "SlaRecord", "StatusHistory",
     "User", "Webhook", "WebhookDelivery",
 ]

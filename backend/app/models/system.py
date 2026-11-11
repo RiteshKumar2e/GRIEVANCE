@@ -3,7 +3,9 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Integer, String, Text
+from datetime import date
+
+from sqlalchemy import JSON, Boolean, Date, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.time import utcnow
@@ -148,3 +150,15 @@ class IntakeDraft(Base):
     grievance_id: Mapped[int | None] = mapped_column(ForeignKey("grievances.id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class PageView(Base):
+    """Consent-based, anonymous page-view counts: route pattern + day only (no user, IP or device data)."""
+
+    __tablename__ = "page_views"
+    __table_args__ = (UniqueConstraint("day", "path", name="uq_pageview_day_path"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    day: Mapped[date] = mapped_column(Date, index=True)
+    path: Mapped[str] = mapped_column(String(200))
+    count: Mapped[int] = mapped_column(Integer, default=0)

@@ -5,6 +5,7 @@ import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import "./index.css";
 import { ApiError } from "./lib/api";
+import { ToastProvider } from "./components/Toast";
 import { AuthProvider } from "./lib/auth";
 import { I18nProvider } from "./lib/i18n";
 
@@ -23,7 +24,9 @@ createRoot(document.getElementById("root")!).render(
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <I18nProvider>
           <AuthProvider>
-            <App />
+            <ToastProvider>
+              <App />
+            </ToastProvider>
           </AuthProvider>
         </I18nProvider>
       </BrowserRouter>

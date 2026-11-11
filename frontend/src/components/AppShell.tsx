@@ -1,14 +1,15 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
-import { Bell, LogOut } from "lucide-react";
+import { Bell, LogOut, Menu, X } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Link, NavLink, useNavigate } from "react-router-dom";
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { fmtDate } from "../lib/format";
 import { LANG_LABEL, useI18n } from "../lib/i18n";
 import type { Lang, Notification, SystemStatus } from "../lib/types";
 import { SyntheticBanner } from "./domain";
+import { SiteFooter } from "./SiteChrome";
 
 export function Logo({ to = "/" }: { to?: string }) {
   return (
@@ -151,64 +152,97 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { t } = useI18n();
   const status = useSystemStatus();
   const nav = useNavigate();
+  const loc = useLocation();
+  const [menuOpen, setMenuOpen] = useState(false);
+  useEffect(() => setMenuOpen(false), [loc.pathname]);
   if (!user) return null;
   const items = NAV[user.role];
   const navLabel = (it: NavItem) =>
     user.role === "citizen" ? ({ "/citizen": t("myGrievances"), "/citizen/new": t("fileComplaint"), "/notifications": t("notifications") }[it.to] ?? it.label) : it.label;
+  const signOut = () => {
+    logout();
+    nav("/");
+  };
+  const linkCls = ({ isActive }: { isActive: boolean }) =>
+    clsx("block whitespace-nowrap border-b-2 px-3 py-2.5 text-sm font-medium", isActive ? "border-brand-700 text-brand-800" : "border-transparent text-ink-soft hover:text-ink");
 
   return (
-    <div className="min-h-screen">
+    <div className="flex min-h-screen flex-col">
+      <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-[70] focus:rounded focus:bg-white focus:px-3 focus:py-2 focus:shadow">
+        Skip to content
+      </a>
       {status.data?.synthetic_data_in_use && <SyntheticBanner />}
       <header className="sticky top-0 z-30 border-b border-line bg-white/95 backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-3 px-4">
-          <div className="flex items-center gap-4">
+        <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-2 px-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <button
+              className="flex h-9 w-9 items-center justify-center rounded-md text-ink-soft hover:bg-canvas hover:text-ink md:hidden"
+              onClick={() => setMenuOpen((o) => !o)}
+              aria-label={menuOpen ? "Close menu" : "Open menu"}
+              aria-expanded={menuOpen}
+              aria-controls="mobile-nav"
+            >
+              {menuOpen ? <X className="h-5 w-5" aria-hidden /> : <Menu className="h-5 w-5" aria-hidden />}
+            </button>
             <Logo to={user.role === "admin" ? "/admin" : user.role === "officer" ? "/officer" : "/citizen"} />
-            <span className="hidden rounded bg-slate-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-ink-soft sm:inline">
+            <span className="hidden rounded bg-slate-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-ink-soft lg:inline">
               {user.role === "officer" && user.department_code ? `Officer · ${user.department_code}` : user.role}
             </span>
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1">
             {user.role === "citizen" && <LanguageSwitcher />}
             <NotificationBell />
-            <div className="hidden text-right sm:block">
-              <p className="text-sm font-medium leading-tight">{user.full_name}</p>
-              <p className="text-[11px] leading-tight text-ink-muted">{user.email}</p>
+            <div className="hidden max-w-[14rem] text-right lg:block">
+              <p className="truncate text-sm font-medium leading-tight">{user.full_name}</p>
+              <p className="truncate text-[11px] leading-tight text-ink-muted">{user.email}</p>
             </div>
-            <button
-              onClick={() => {
-                logout();
-                nav("/");
-              }}
-              className="flex h-9 w-9 items-center justify-center rounded-md text-ink-soft hover:bg-canvas hover:text-ink"
-              aria-label="Sign out"
-              title="Sign out"
-            >
+            <button onClick={signOut} className="hidden h-9 w-9 items-center justify-center rounded-md text-ink-soft hover:bg-canvas hover:text-ink md:flex" aria-label="Sign out" title="Sign out">
               <LogOut className="h-[18px] w-[18px]" aria-hidden />
             </button>
           </div>
         </div>
-        <nav className="mx-auto max-w-7xl overflow-x-auto px-4" aria-label="Main">
+        <nav className="mx-auto hidden max-w-7xl overflow-x-auto px-4 md:block" aria-label="Main">
           <ul className="flex gap-1">
             {items.map((it) => (
               <li key={it.to}>
-                <NavLink
-                  to={it.to}
-                  end={it.end}
-                  className={({ isActive }) =>
-                    clsx(
-                      "block whitespace-nowrap border-b-2 px-3 py-2.5 text-sm font-medium",
-                      isActive ? "border-brand-700 text-brand-800" : "border-transparent text-ink-soft hover:text-ink",
-                    )
-                  }
-                >
+                <NavLink to={it.to} end={it.end} className={linkCls}>
                   {navLabel(it)}
                 </NavLink>
               </li>
             ))}
           </ul>
         </nav>
+        {menuOpen && (
+          <nav id="mobile-nav" className="border-t border-line bg-white md:hidden" aria-label="Main">
+            <div className="px-4 py-3">
+              <p className="truncate text-sm font-medium">{user.full_name}</p>
+              <p className="truncate text-xs text-ink-muted">{user.email} · {user.role}</p>
+            </div>
+            <ul className="border-t border-line py-1">
+              {items.map((it) => (
+                <li key={it.to}>
+                  <NavLink
+                    to={it.to}
+                    end={it.end}
+                    className={({ isActive }) => clsx("block px-4 py-2.5 text-sm font-medium", isActive ? "bg-brand-50 text-brand-800" : "text-ink-soft hover:bg-canvas")}
+                  >
+                    {navLabel(it)}
+                  </NavLink>
+                </li>
+              ))}
+              <li>
+                <button onClick={signOut} className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-medium text-ink-soft hover:bg-canvas">
+                  <LogOut className="h-4 w-4" aria-hidden /> Sign out
+                </button>
+              </li>
+            </ul>
+          </nav>
+        )}
       </header>
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:py-8">{children}</main>
+      <main id="main" className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:py-8">
+        {children}
+      </main>
+      <SiteFooter compact />
     </div>
   );
 }

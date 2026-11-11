@@ -13,7 +13,7 @@ from app.agents import predictive
 from app.core.deps import require_admin
 from app.core.time import as_aware, utcnow
 from app.db.session import get_db
-from app.models import AgentRun, AgentTrace, AuditEvent, Department, Grievance, GrievanceCategory, SlaRecord, User
+from app.models import AgentRun, AgentTrace, AuditEvent, PageView, Department, Grievance, GrievanceCategory, SlaRecord, User
 from app.models.enums import OPEN_STATUSES, GrievanceStatus, SlaState
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
@@ -160,3 +160,16 @@ def agent_activity(days: int = Query(default=7, ge=1, le=90), _: User = Depends(
     traces = db.scalar(select(func.count()).select_from(AgentTrace).where(AgentTrace.started_at >= since)) or 0
     return {"window_days": days, "traces": traces, "agents": sorted(agents.values(), key=lambda a: a["agent"]),
             "intake_providers": providers, "ai_actions": ai_actions, "human_review_decisions": human_reviews}
+
+
+@router.get("/pageviews")
+def pageviews(days: int = Query(default=30, ge=1, le=365), _: User = Depends(require_admin), db: Session = Depends(get_db)):
+    """Anonymous, consent-based page-view counts (first-party; no third-party analytics)."""
+    since = (utcnow() - timedelta(days=days)).date()
+    by_path = db.execute(select(PageView.path, func.sum(PageView.count)).where(PageView.day >= since)
+                         .group_by(PageView.path).order_by(func.sum(PageView.count).desc()).limit(25)).all()
+    by_day = db.execute(select(PageView.day, func.sum(PageView.count)).where(PageView.day >= since)
+                        .group_by(PageView.day).order_by(PageView.day)).all()
+    return {"window_days": days, "total": sum(int(n) for _, n in by_path),
+            "top_pages": [{"path": p, "views": int(n)} for p, n in by_path],
+            "by_day": [{"day": d.isoformat(), "views": int(n)} for d, n in by_day]}

@@ -42,6 +42,7 @@ def analyze_intake(
     location_hint: str | None = None,
     input_mode: str = "text",
 ) -> IntakeDraft:
+    _enforce_daily_cap(db, IntakeDraft, IntakeDraft.citizen_id, citizen.id, get_settings().max_drafts_per_day, "analyses")
     tracer = Tracer(db, "intake_analysis", metadata={"input_mode": input_mode})
     with tracer.step("intake", {"chars": len(text), "language_hint": language_hint, "input_mode": input_mode}) as run:
         res = run_intake(db, text, language_hint=language_hint, location_hint=location_hint, gazetteer=geo.gazetteer())
@@ -91,6 +92,7 @@ def confirm_draft(db: Session, citizen: User, token: str, edits: dict[str, Any])
         raise DomainError("This draft has expired. Please describe the issue again.")
     if edits.get("confirmed") is not True:
         raise PolicyViolation("Explicit citizen confirmation is required before submission.")
+    _enforce_daily_cap(db, Grievance, Grievance.citizen_id, citizen.id, get_settings().max_grievances_per_day, "grievances")
 
     ex = draft.extraction
     ai_code = ex["category_code"]
@@ -318,6 +320,20 @@ def auto_close(db: Session) -> dict[str, Any]:
 
 
 # --------------------------------------------------------------------------- helpers
+class RateLimited(DomainError):
+    status_code = 429
+    code = "rate_limited"
+
+
+def _enforce_daily_cap(db: Session, model, owner_col, owner_id: int, cap: int, noun: str) -> None:
+    """Spam protection: a citizen may create at most `cap` drafts / grievances in 24 hours."""
+    from sqlalchemy import func
+
+    since = utcnow() - timedelta(hours=24)
+    n = db.scalar(select(func.count()).select_from(model).where(owner_col == owner_id, model.created_at >= since)) or 0
+    if n >= cap:
+        raise RateLimited(f"Daily limit reached: at most {cap} {noun} per 24 hours. Please try again later.")
+
 def _category(db: Session, code: str) -> GrievanceCategory:
     c = db.scalar(select(GrievanceCategory).where(GrievanceCategory.code == code, GrievanceCategory.is_active.is_(True)))
     if c is None:

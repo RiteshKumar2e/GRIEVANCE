@@ -1,5 +1,8 @@
 """Public metadata (no auth): categories, departments, wards and system capability status."""
-from fastapi import APIRouter, Depends
+import re
+
+from fastapi import APIRouter, Depends, Request, Response
+from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -7,7 +10,9 @@ from app.core.config import get_settings
 from app.db.session import get_db, is_postgres
 from app.llm import embeddings, stt
 from app.llm.client import provider_status
-from app.models import Department, Grievance, GrievanceCategory
+from app.core.ratelimit import limiter
+from app.core.time import utcnow
+from app.models import Department, Grievance, GrievanceCategory, PageView
 from app.services import geo
 
 router = APIRouter(prefix="/meta", tags=["meta"])
@@ -49,3 +54,26 @@ def system_status(db: Session = Depends(get_db)):
         "synthetic_data_in_use": "SYNTHETIC" in sources or "SYNTHETIC" in cat_sources,
         "langfuse": {"enabled": s.langfuse_enabled},
     }
+
+
+class PageViewIn(BaseModel):
+    path: str = Field(min_length=1, max_length=200)
+
+
+_PATH_OK = re.compile(r"^/[A-Za-z0-9/_:\-]*$")
+
+
+@router.post("/pageview", status_code=204, response_class=Response)
+def pageview(body: PageViewIn, request: Request, db: Session = Depends(get_db)):
+    """Consent-gated, anonymous page-view counter. Stores only (day, route pattern, count)."""
+    limiter.check(request, "pageview", limit=240, window=60)
+    if not _PATH_OK.match(body.path):
+        return Response(status_code=204)
+    today = utcnow().date()
+    row = db.scalar(select(PageView).where(PageView.day == today, PageView.path == body.path))
+    if row is None:
+        db.add(PageView(day=today, path=body.path, count=1))
+    else:
+        row.count += 1
+    db.commit()
+    return Response(status_code=204)

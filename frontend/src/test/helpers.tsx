@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
+import { ToastProvider } from "../components/Toast";
 import { AuthProvider } from "../lib/auth";
 import { I18nProvider } from "../lib/i18n";
 
@@ -30,7 +31,9 @@ export function renderApp(ui: ReactNode, { route = "/" } = {}) {
     <QueryClientProvider client={qc}>
       <MemoryRouter initialEntries={[route]} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <I18nProvider>
-          <AuthProvider>{ui}</AuthProvider>
+          <AuthProvider>
+            <ToastProvider>{ui}</ToastProvider>
+          </AuthProvider>
         </I18nProvider>
       </MemoryRouter>
     </QueryClientProvider>,

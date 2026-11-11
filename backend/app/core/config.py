@@ -57,6 +57,10 @@ class Settings(BaseSettings):
     seed_demo_users: bool = True
     demo_password: str = "Demo@12345"
 
+    max_grievances_per_day: int = 10
+    max_drafts_per_day: int = 60
+    enforce_https: bool = False  # set true behind a TLS-terminating proxy in production
+
     upload_dir: str = str(BACKEND_DIR / "uploads")
     max_upload_mb: int = 15
 

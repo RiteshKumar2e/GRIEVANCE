@@ -30,6 +30,8 @@ def user_out(u: User) -> UserOut:
 @router.post("/register", response_model=TokenOut, status_code=201)
 def register(body: RegisterIn, request: Request, db: Session = Depends(get_db)):
     limiter.check(request, "register", limit=10, window=3600)
+    if body.website:  # honeypot tripped: reject without revealing why
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Registration could not be completed. Please try again later.")
     email = body.email.lower()
     if db.scalar(select(User).where(User.email == email)):
         raise HTTPException(status.HTTP_409_CONFLICT, "An account with this e-mail already exists")

@@ -18,13 +18,34 @@ log = logging.getLogger("grievance")
 API = "/api/v1"
 
 
+API_CSP = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'"
+# Swagger/ReDoc pages load their UI from the jsDelivr CDN.
+DOCS_CSP = ("default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; "
+            "img-src 'self' data: https://fastapi.tiangolo.com https://cdn.redoc.ly; font-src 'self' https://fonts.gstatic.com; "
+            "worker-src 'self' blob:; frame-ancestors 'none'")
+
+
 class SecurityHeaders(BaseHTTPMiddleware):
+    """Security headers, optional HTTPS enforcement (behind a TLS proxy) and a strict CSP for API responses."""
+
     async def dispatch(self, request, call_next):
+        s = get_settings()
+        proto = request.headers.get("x-forwarded-proto", request.url.scheme)
+        if s.enforce_https and proto == "http" and request.url.path != "/health":
+            from starlette.responses import RedirectResponse
+
+            return RedirectResponse(str(request.url.replace(scheme="https")), status_code=308)
         resp = await call_next(request)
         resp.headers.setdefault("X-Content-Type-Options", "nosniff")
         resp.headers.setdefault("X-Frame-Options", "DENY")
         resp.headers.setdefault("Referrer-Policy", "no-referrer")
         resp.headers.setdefault("Cache-Control", "no-store")
+        resp.headers.setdefault("Permissions-Policy", "camera=(), geolocation=(), microphone=()")
+        is_docs = request.url.path.startswith((f"{API}/docs", f"{API}/redoc"))
+        resp.headers.setdefault("Content-Security-Policy", DOCS_CSP if is_docs else API_CSP)
+        if s.enforce_https:
+            resp.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
         return resp
 
 
