@@ -50,24 +50,35 @@ control wherever the risk or uncertainty is high.
 ## Architecture
 
 ```mermaid
-flowchart LR
-  subgraph Citizen
-    A[Chat or voice<br/>mr / hi / en]
-  end
-  A -->|draft| I1[1 Conversational intake]
-  I1 -->|citizen confirms| P[2 Policy gate<br/>Category Master]
-  P --> R[3 Case memory<br/>pgvector RAG]
-  R --> D[4 Duplicate grouping]
-  D --> S[5 Predictive SLA]
-  S --> X[6 Actions<br/>assign · notify · webhook]
-  X --> DB[(PostgreSQL + pgvector)]
-  X --> WH[n8n / Zapier]
-  P -.sensitive or uncertain.-> H[Human review queue]
-  subgraph LLM chain
-    G[Groq] -->|fails| GM[Gemini] -->|fails| RU[Deterministic rules]
-  end
-  I1 --- G
-  I1 & P & R & D & S & X -. traced .-> LF[Langfuse + in-app traces]
+flowchart TD
+    C["Citizen: chat or voice<br/>Marathi · Hindi · English"]
+    A1["1 · Conversational intake<br/>follow-up questions, structured draft"]
+    OK{"Citizen confirms<br/>the draft?"}
+    A2["2 · Policy gate<br/>Category Master rules"]
+    HR["Human review queue<br/>authorised officer decides"]
+    A3["3 · Case memory<br/>pgvector similarity search"]
+    A4["4 · Duplicate grouping<br/>meaning + distance + time"]
+    A5["5 · Predictive SLA<br/>breach risk, recurrence"]
+    A6["6 · Backend actions<br/>assign, notify, update status"]
+    DB[("PostgreSQL + pgvector")]
+    WH["Signed webhooks<br/>n8n / Zapier"]
+    LLM["LLM chain<br/>Groq, then Gemini, then rules"]
+    OBS["Traces with decision trails<br/>Langfuse + in-app explorer"]
+
+    C --> A1
+    A1 --> OK
+    OK -->|"yes"| A2
+    OK -->|"no, edit"| A1
+    A2 -->|"sensitive or uncertain"| HR
+    A2 -->|"cleared"| A3
+    HR --> A3
+    A3 --> A4
+    A4 --> A5
+    A5 --> A6
+    A6 --> DB
+    A6 --> WH
+    LLM -.->|"advisory only"| A1
+    A6 -.-> OBS
 ```
 
 - **Backend:** FastAPI, SQLAlchemy 2, Alembic, PostgreSQL 16 with pgvector (SQLite supported for quick local runs and tests).
