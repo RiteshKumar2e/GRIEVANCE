@@ -45,7 +45,7 @@ function FileButton() {
 
 export function CitizenDashboard() {
   const { user } = useAuth();
-  const { lang } = useI18n();
+  const { lang, t } = useI18n();
   const q = useMine();
   const rows = q.data ?? [];
   const active = rows.filter((g) => OPEN.includes(g.status));
@@ -86,7 +86,7 @@ export function CitizenDashboard() {
             </div>
           )}
           {rows.length === 0 ? (
-            <EmptyState title="You have not filed a grievance yet" body="Describe a civic problem in English, Hindi or Marathi, by typing or speaking where voice input is enabled." action={<FileButton />} />
+            <EmptyState title={t("emptyGrievances")} body="Describe a civic problem in English, Hindi or Marathi, by typing or speaking where voice input is enabled." action={<FileButton />} />
           ) : (
             <div className="grid gap-4 xl:grid-cols-[1.4fr_1fr]">
               <Panel title="Recent activity" description="Your grievances, most recently updated first." action={<Link to="/citizen/grievances" className="text-[13px] font-medium text-brand-700 hover:underline">View all</Link>}>
@@ -193,7 +193,7 @@ export function CitizenGrievances() {
         rowKey={(g) => g.public_id}
         initialSort={{ key: "filed", dir: "desc" }}
         pageSize={10}
-        empty={filtered ? { title: "No grievances match", body: "Change or clear the filters." } : { title: "You have not filed a grievance yet", action: <FileButton /> }}
+        empty={filtered ? { title: "No grievances match", body: "Change or clear the filters." } : { title: t("emptyGrievances"), action: <FileButton /> }}
         columns={[
           { key: "ref", header: "Reference", render: (g) => <Link to={`/citizen/grievances/${g.public_id}`} className="font-mono text-[12px] font-semibold text-brand-700 hover:underline">{g.public_id}</Link>, sortValue: (g) => g.public_id },
           { key: "subject", header: "Subject", render: (g) => <span className="line-clamp-2 font-medium text-ink">{g.title}</span>, sortValue: (g) => g.title, className: "w-[26%]" },
