@@ -131,8 +131,6 @@ GRIEVANCE/
 │   ├── package.json
 │   ├── nginx.conf
 │   └── Dockerfile
-├── .claude/               Claude Code rules, agents, skills, settings
-├── CLAUDE.md
 ├── .gitignore
 ├── docker-compose.yml
 └── README.md

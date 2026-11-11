@@ -75,7 +75,6 @@ desktop.ini
 *.p12
 *.pfx
 secrets/
-.claude/settings.local.json
 
 # Office lock files
 ~$*
