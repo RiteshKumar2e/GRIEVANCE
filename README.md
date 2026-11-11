@@ -1,11 +1,5 @@
+
 <div align="center">
-
-<img src="frontend/public/brand/grievance-logo.png" alt="GRIEVANCE. Speak, Track, Resolve. An Intelligent Grievance Redressal Ecosystem." width="560" />
-
-**Agentic AI for intelligent grievance redressal**<br/>
-HackFusion 4.0 · Agentic AI track
-
-</div>
 
 GRIEVANCE turns a submit-and-wait complaint portal into a system that behaves like an experienced grievance
 officer. A citizen describes a problem in Marathi, Hindi or English, by text or voice. Six cooperating agents
@@ -39,17 +33,17 @@ control wherever the risk or uncertainty is high.
 
 ## How the problem statement is met
 
-| Capability required | What GRIEVANCE does | Where |
-|---|---|---|
-| **1. Conversational intake** (text and voice; Marathi, Hindi, English; structured draft) | A chat assistant asks for missing facts (what, where, since when) in the citizen's language, then produces a structured draft: category, department, ward, urgency, SLA and summary. Voice is transcribed by Whisper and shown for editing before it is sent. Nothing is filed until the citizen ticks a confirmation and submits. | `backend/app/agents/conversation.py`, `intake.py` |
-| **2. Safety and policy enforcement** (Category Master is the source of truth; sensitive cases never auto-closed) | A deterministic policy gate reads the Category Master for department, SLA, sensitivity, identity hiding and confidence threshold. Sensitive, low-confidence, prompt-injection or sensitive-keyword cases go to human review. The lifecycle service refuses any attempt by `AI_SYSTEM` to close a sensitive case, and there is no rejection status at all. | `agents/policy.py`, `services/grievances.py` |
-| **3. Case memory (RAG)** | Local multilingual embeddings (`paraphrase-multilingual-MiniLM-L12-v2`) and pgvector cosine search retrieve the most similar resolved cases from the grievance history, widening from category to department to all. Officers see them as evidence with source IDs and similarity. | `agents/rag.py` |
-| **4. Duplicate detection and incident grouping** (semantic, geographic, time; no silent drops) | Score = 0.55 semantic + 0.20 distance + 0.15 time + 0.10 category. Matches are linked into a group; every report keeps its own ID, status, notifications and audit trail. Officers can unlink. Works across languages (a Hindi and an English report of the same overflow linked at semantic 0.82). | `agents/duplicate.py` |
-| **5. Predictive intelligence** (SLA breach and recurrence, before the delay) | Predicts resolution time and breach probability from historical resolution times and current department load, warns at 75% of the SLA or when the risk is high, escalates breaches, and finds recurring category-and-ward hotspots and department bottlenecks. | `agents/predictive.py` |
-| **6. Real-world action** (mock DB updates, department assignment, n8n/Zapier webhooks) | Assigns the department and least-loaded ward officer, updates status, notifies people, and sends HMAC-signed webhooks compatible with n8n and Zapier. A built-in mock receiver lets you demonstrate delivery without external services. | `agents/actions.py`, `services/webhooks.py`, `api/mock.py` |
-| **Observability** (Langfuse live tracing; inspectable reasoning) | Every workflow is traced step by step with model, inputs, outputs, RAG evidence, policy decision, confidence, actions, errors and timing. Each step records a structured decision trail. Traces are exported to Langfuse as public traces, and can also be shared as redacted links from the app. | `services/tracing.py` |
+| Capability required                                                                                                    | What GRIEVANCE does                                                                                                                                                                                                                                                                                                                                         | Where                                                            |
+| ---------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| **1. Conversational intake** (text and voice; Marathi, Hindi, English; structured draft)                         | A chat assistant asks for missing facts (what, where, since when) in the citizen's language, then produces a structured draft: category, department, ward, urgency, SLA and summary. Voice is transcribed by Whisper and shown for editing before it is sent. Nothing is filed until the citizen ticks a confirmation and submits.                          | `backend/app/agents/conversation.py`, `intake.py`            |
+| **2. Safety and policy enforcement** (Category Master is the source of truth; sensitive cases never auto-closed) | A deterministic policy gate reads the Category Master for department, SLA, sensitivity, identity hiding and confidence threshold. Sensitive, low-confidence, prompt-injection or sensitive-keyword cases go to human review. The lifecycle service refuses any attempt by `AI_SYSTEM` to close a sensitive case, and there is no rejection status at all. | `agents/policy.py`, `services/grievances.py`                 |
+| **3. Case memory (RAG)**                                                                                         | Local multilingual embeddings (`paraphrase-multilingual-MiniLM-L12-v2`) and pgvector cosine search retrieve the most similar resolved cases from the grievance history, widening from category to department to all. Officers see them as evidence with source IDs and similarity.                                                                        | `agents/rag.py`                                                |
+| **4. Duplicate detection and incident grouping** (semantic, geographic, time; no silent drops)                   | Score = 0.55 semantic + 0.20 distance + 0.15 time + 0.10 category. Matches are linked into a group; every report keeps its own ID, status, notifications and audit trail. Officers can unlink. Works across languages (a Hindi and an English report of the same overflow linked at semantic 0.82).                                                         | `agents/duplicate.py`                                          |
+| **5. Predictive intelligence** (SLA breach and recurrence, before the delay)                                     | Predicts resolution time and breach probability from historical resolution times and current department load, warns at 75% of the SLA or when the risk is high, escalates breaches, and finds recurring category-and-ward hotspots and department bottlenecks.                                                                                              | `agents/predictive.py`                                         |
+| **6. Real-world action** (mock DB updates, department assignment, n8n/Zapier webhooks)                           | Assigns the department and least-loaded ward officer, updates status, notifies people, and sends HMAC-signed webhooks compatible with n8n and Zapier. A built-in mock receiver lets you demonstrate delivery without external services.                                                                                                                     | `agents/actions.py`, `services/webhooks.py`, `api/mock.py` |
+| **Observability** (Langfuse live tracing; inspectable reasoning)                                                 | Every workflow is traced step by step with model, inputs, outputs, RAG evidence, policy decision, confidence, actions, errors and timing. Each step records a structured decision trail. Traces are exported to Langfuse as public traces, and can also be shared as redacted links from the app.                                                           | `services/tracing.py`                                          |
 
-**Rubric coverage.** Real-world understanding: grounded in 1.23M real BBMP grievances (volume, categories, channels, statuses). Technical quality: 80 automated backend tests and 10 frontend tests, and a PostgreSQL/pgvector stack in Docker. Responsible AI: policy gate, human review, audit log, PII redaction. Accessibility: three languages, voice in and read-aloud out, keyboard and screen-reader support. Observability: Langfuse export and an in-app trace explorer.
+**Rubric coverage.** Real-world understanding: grounded in 1.23M real BBMP grievances (volume, categories, channels, statuses). Technical quality: 76 automated backend tests and 10 frontend tests, and a PostgreSQL/pgvector stack in Docker. Responsible AI: policy gate, human review, audit log, PII redaction. Accessibility: three languages, voice in and read-aloud out, keyboard and screen-reader support. Observability: Langfuse export and an in-app trace explorer.
 
 ---
 
@@ -104,11 +98,11 @@ docker build -t grievance-frontend ./frontend
 docker compose up -d
 ```
 
-| Service | URL |
-|---|---|
-| Web app | http://localhost:8080 |
-| API docs (Swagger) | http://localhost:8000/api/v1/docs |
-| PostgreSQL | localhost:5432 (grievance / grievance) |
+| Service            | URL                                    |
+| ------------------ | -------------------------------------- |
+| Web app            | http://localhost:8080                  |
+| API docs (Swagger) | http://localhost:8000/api/v1/docs      |
+| PostgreSQL         | localhost:5432 (grievance / grievance) |
 
 The backend migrates and seeds the synthetic datasets on start (about a minute the first time). To add the
 real BBMP data: `docker compose exec backend python -m app.cli external fetch` then
@@ -140,12 +134,12 @@ npm run dev                                               # http://localhost:517
 
 **Demo accounts** (synthetic, development only; password `Demo@12345`):
 
-| Role | E-mail |
-|---|---|
-| Citizen | `citizen@example.org` |
-| Officer, Water Supply | `officer.water@example.org` |
+| Role                                              | E-mail                         |
+| ------------------------------------------------- | ------------------------------ |
+| Citizen                                           | `citizen@example.org`        |
+| Officer, Water Supply                             | `officer.water@example.org`  |
 | Officer, Women and Child Safety (sensitive cases) | `officer.safety@example.org` |
-| Administrator | `admin@example.org` |
+| Administrator                                     | `admin@example.org`          |
 
 ---
 
@@ -157,30 +151,30 @@ in rule-based mode (no LLM keys).
 
 ### Endpoint reference
 
-| Method | Path | Role | Purpose |
-|---|---|---|---|
-| POST | `/auth/register` · `/auth/login` | public | Create a citizen account · obtain a JWT |
-| GET | `/auth/me` | any | Current user |
-| GET | `/meta/categories` · `/meta/wards` · `/meta/status` | public | Category Master, wards, live system capabilities |
-| POST | `/citizen/intake/converse` | citizen | **Conversational intake**: one chat turn; returns a follow-up question or a draft |
-| POST | `/citizen/intake/transcribe` | citizen | Whisper speech-to-text (audio is not stored) |
-| POST | `/citizen/intake/{token}/confirm` | citizen | **Explicit confirmation**: creates the grievance and runs the six-agent pipeline |
-| GET | `/citizen/grievances` · `/citizen/grievances/{id}` | citizen | Track own grievances and status history |
-| POST | `/citizen/grievances/{id}/confirm-resolution` · `/dispute` | citizen | Close with rating, or dispute to reopen |
-| GET | `/officer/queue` · `/officer/stats` | officer, admin | Work queues (mine, department, human review) |
-| GET | `/officer/grievances/{id}` | officer, admin | Workspace: AI summary, policy decision and reasoning, precedents, duplicates, SLA, audit |
-| POST | `/officer/grievances/{id}/review` · `/status` · `/notes` · `/reassign` · `/escalate` | officer, admin | Human decisions and backend actions |
-| POST | `/officer/grievances/{id}/duplicates/{other}/unlink` | officer, admin | Remove an incorrect duplicate link |
-| GET/PATCH | `/admin/categories` · `/admin/officers` · `/admin/departments` | admin | Category Master and directory |
-| POST | `/admin/datasets/import` | admin | Import CSV/XLSX (dry run first) for the HackFusion datasets |
-| GET/POST | `/admin/webhooks` · `/admin/webhooks/{id}/test` | admin | Register n8n/Zapier webhooks and send a signed test event |
-| POST/GET | `/mock/webhook-receiver` | public POST, admin GET | Built-in stand-in for an n8n or Zapier trigger; verifies the signature |
-| POST | `/admin/jobs/sla-scan` · `/admin/jobs/auto-close` | admin | Run the SLA monitor or auto-close now |
-| GET | `/analytics/*` | admin | Overview, trends, SLA, recurrence, bottlenecks, agent activity, page views |
-| GET | `/observability/traces` · `/traces/{id}` · `/langfuse` | admin | Traces, step detail, Langfuse connection check |
-| POST | `/observability/traces/{id}/share` | admin | Create a redacted public link |
-| GET | `/public/traces/{token}` | public | Redacted shared trace |
-| GET | `/external/datasets` · `/external/bbmp/summary` · `/external/bbmp/records` | officer, admin | Real public data: provenance, statistics, record explorer |
+| Method    | Path                                                                                               | Role                   | Purpose                                                                                  |
+| --------- | -------------------------------------------------------------------------------------------------- | ---------------------- | ---------------------------------------------------------------------------------------- |
+| POST      | `/auth/register` · `/auth/login`                                                              | public                 | Create a citizen account · obtain a JWT                                                 |
+| GET       | `/auth/me`                                                                                       | any                    | Current user                                                                             |
+| GET       | `/meta/categories` · `/meta/wards` · `/meta/status`                                        | public                 | Category Master, wards, live system capabilities                                         |
+| POST      | `/citizen/intake/converse`                                                                       | citizen                | **Conversational intake**: one chat turn; returns a follow-up question or a draft  |
+| POST      | `/citizen/intake/transcribe`                                                                     | citizen                | Whisper speech-to-text (audio is not stored)                                             |
+| POST      | `/citizen/intake/{token}/confirm`                                                                | citizen                | **Explicit confirmation**: creates the grievance and runs the six-agent pipeline   |
+| GET       | `/citizen/grievances` · `/citizen/grievances/{id}`                                            | citizen                | Track own grievances and status history                                                  |
+| POST      | `/citizen/grievances/{id}/confirm-resolution` · `/dispute`                                    | citizen                | Close with rating, or dispute to reopen                                                  |
+| GET       | `/officer/queue` · `/officer/stats`                                                           | officer, admin         | Work queues (mine, department, human review)                                             |
+| GET       | `/officer/grievances/{id}`                                                                       | officer, admin         | Workspace: AI summary, policy decision and reasoning, precedents, duplicates, SLA, audit |
+| POST      | `/officer/grievances/{id}/review` · `/status` · `/notes` · `/reassign` · `/escalate` | officer, admin         | Human decisions and backend actions                                                      |
+| POST      | `/officer/grievances/{id}/duplicates/{other}/unlink`                                             | officer, admin         | Remove an incorrect duplicate link                                                       |
+| GET/PATCH | `/admin/categories` · `/admin/officers` · `/admin/departments`                             | admin                  | Category Master and directory                                                            |
+| POST      | `/admin/datasets/import`                                                                         | admin                  | Import CSV/XLSX (dry run first) for the HackFusion datasets                              |
+| GET/POST  | `/admin/webhooks` · `/admin/webhooks/{id}/test`                                               | admin                  | Register n8n/Zapier webhooks and send a signed test event                                |
+| POST/GET  | `/mock/webhook-receiver`                                                                         | public POST, admin GET | Built-in stand-in for an n8n or Zapier trigger; verifies the signature                   |
+| POST      | `/admin/jobs/sla-scan` · `/admin/jobs/auto-close`                                             | admin                  | Run the SLA monitor or auto-close now                                                    |
+| GET       | `/analytics/*`                                                                                   | admin                  | Overview, trends, SLA, recurrence, bottlenecks, agent activity, page views               |
+| GET       | `/observability/traces` · `/traces/{id}` · `/langfuse`                                     | admin                  | Traces, step detail, Langfuse connection check                                           |
+| POST      | `/observability/traces/{id}/share`                                                               | admin                  | Create a redacted public link                                                            |
+| GET       | `/public/traces/{token}`                                                                         | public                 | Redacted shared trace                                                                    |
+| GET       | `/external/datasets` · `/external/bbmp/summary` · `/external/bbmp/records`                 | officer, admin         | Real public data: provenance, statistics, record explorer                                |
 
 ### Example: a conversational intake in Hindi
 
@@ -329,13 +323,13 @@ applied and what it decided. The trail is a structured explanation, not raw mode
 
 ## Data and provenance
 
-| Dataset | Status | Used by the agents | Licence |
-|---|---|---|---|
-| HackFusion Category Master, Mock Grievance History, Department Directory | **Synthetic** stand-ins (`backend/data/synthetic/`, generated by `scripts/generate_synthetic_data.py`) until the official files are released | Yes | Generated for this project |
-| BBMP Sahaaya 2.0 citizen grievances (Vonter) | **Imported:** 1,230,890 real records, Feb 2020 to Aug 2026 | No. Reference statistics and record explorer only | ODbL v1.0 |
-| BBMP Grievances Data 2025 (OpenCity) | Downloaded; used to verify the import (all 126,974 IDs matched) | No | Other (Public Domain) |
-| data.gov.in CPGRAM: monthly receipts and disposals; nodal officer directory | Not downloaded: the OGD API requires a personal API key (`DATA_GOV_IN_API_KEY`) | No | Government Open Data License - India |
-| CPGRAMS individual grievances | Not accessible: available only to authorised users on pgportal.gov.in | No | |
+| Dataset                                                                     | Status                                                                                                                                                 | Used by the agents                                | Licence                              |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------- | ------------------------------------ |
+| HackFusion Category Master, Mock Grievance History, Department Directory    | **Synthetic** stand-ins (`backend/data/synthetic/`, generated by `scripts/generate_synthetic_data.py`) until the official files are released | Yes                                               | Generated for this project           |
+| BBMP Sahaaya 2.0 citizen grievances (Vonter)                                | **Imported:** 1,230,890 real records, Feb 2020 to Aug 2026                                                                                       | No. Reference statistics and record explorer only | ODbL v1.0                            |
+| BBMP Grievances Data 2025 (OpenCity)                                        | Downloaded; used to verify the import (all 126,974 IDs matched)                                                                                        | No                                                | Other (Public Domain)                |
+| data.gov.in CPGRAM: monthly receipts and disposals; nodal officer directory | Not downloaded: the OGD API requires a personal API key (`DATA_GOV_IN_API_KEY`)                                                                      | No                                                | Government Open Data License - India |
+| CPGRAMS individual grievances                                               | Not accessible: available only to authorised users on pgportal.gov.in                                                                                  | No                                                |                                      |
 
 The real BBMP records contain **no complaint text written by citizens** and **no resolution dates**, so they are
 not used for RAG, duplicate detection or SLA training. Staff names are not imported, and phone numbers, e-mail
@@ -373,7 +367,7 @@ pixels wide.
 ## Testing
 
 ```bash
-cd backend && python -m pytest -q          # 80 tests
+cd backend && python -m pytest -q          # 76 tests
 cd frontend && npm run lint && npm run typecheck && npm test && npm run build   # 10 tests
 ```
 
