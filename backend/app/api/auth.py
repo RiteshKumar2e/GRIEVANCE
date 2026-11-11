@@ -1,5 +1,8 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user
@@ -15,6 +18,7 @@ from app.services.audit import actor_of
 from app.services.notifications import PREFERENCE_GROUPS
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+log = logging.getLogger("grievance.auth")
 
 # Constant-time-ish dummy hash so unknown e-mails take as long as wrong passwords.
 _DUMMY_HASH = hash_password("dummy-password-1")
@@ -87,8 +91,13 @@ def login(body: LoginIn, request: Request, db: Session = Depends(get_db)):
     ok = verify_password(body.password, u.password_hash if u else _DUMMY_HASH)
     if not u or not ok or not u.is_active:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Incorrect e-mail or password")
-    u.last_login_at = utcnow()
-    db.commit()
+    # Best effort: a busy database must never block sign-in just to record a timestamp.
+    try:
+        u.last_login_at = utcnow()
+        db.commit()
+    except OperationalError:
+        db.rollback()
+        log.warning("Could not record last_login_at for user %s (database busy)", u.id)
     token, exp = create_access_token(u.id, u.role)
     return TokenOut(access_token=token, expires_in=exp, user=user_out(u))
 

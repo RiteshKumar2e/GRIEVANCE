@@ -258,7 +258,7 @@ export default function Landing() {
 
   // Visitors go to intake (sign-in first, then returned there); citizens straight to intake; staff to their own home.
   const submitTo = !user || user.role === "citizen" ? "/citizen/new" : homeFor(user.role);
-  const trackTo = !user || user.role === "citizen" ? "/citizen" : homeFor(user.role);
+  const trackTo = !user || user.role === "citizen" ? "/citizen/track" : homeFor(user.role);
 
   // Other pages link here with { state: { section } }; old "/#section" URLs still work and are tidied to "/".
   const section = (loc.state as { section?: string } | null)?.section ?? (loc.hash ? loc.hash.slice(1) : undefined);

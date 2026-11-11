@@ -8,6 +8,15 @@ import { api } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 import { fmtDate, pct, titleCase } from "../../lib/format";
 import type { CategoryMeta, GrievanceDetail } from "../../lib/types";
+import { caseHref } from "../../components/nav";
+import type { Role } from "../../lib/types";
+
+/** Where "back" goes from the case workspace, per role. */
+function backTo(role: Role, review: boolean): string {
+  if (role === "dept_admin") return review ? "/department/approvals" : "/department/grievances";
+  if (role === "admin") return review ? "/admin/review" : "/admin/grievances";
+  return review ? "/officer/review" : "/officer/cases";
+}
 
 type FormState = { note: string; category_code: string; officer_code: string; resolution: string };
 type Action = null | "review" | "progress" | "resolve" | "close" | "reassign" | "escalate";
@@ -132,7 +141,7 @@ export default function OfficerGrievance() {
   return (
     <div>
       <PageHeader
-        eyebrow={<Link to={g.status === "PENDING_REVIEW" ? "/officer/review" : "/officer"} className="text-sm text-brand-700 hover:underline">← Back to queue</Link>}
+        eyebrow={<Link to={backTo(user!.role, g.status === "PENDING_REVIEW")} className="text-sm text-brand-700 hover:underline">← Back to {g.status === "PENDING_REVIEW" ? "review queue" : "case list"}</Link>}
         title={g.title}
         subtitle={
           <span className="flex flex-wrap items-center gap-2">
@@ -244,7 +253,7 @@ export default function OfficerGrievance() {
               {g.duplicates?.map((d) => (
                 <li key={d.public_id} className="flex flex-wrap items-center justify-between gap-2 py-2.5">
                   <div className="min-w-0">
-                    <Link to={`/officer/grievances/${d.public_id}`} className="font-mono text-sm font-semibold text-brand-700 hover:underline">{d.public_id}</Link>
+                    <Link to={caseHref(user!.role, d.public_id)} className="font-mono text-sm font-semibold text-brand-700 hover:underline">{d.public_id}</Link>
                     <p className="truncate text-sm text-ink-soft">{d.title} · {d.ward}</p>
                     <p className="text-xs text-ink-muted">
                       score {pct(d.score)} · semantic {pct(d.signals.semantic ?? null)} · geo {pct(d.signals.geo ?? null)} · time {pct(d.signals.time ?? null)}

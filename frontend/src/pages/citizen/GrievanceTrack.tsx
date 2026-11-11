@@ -59,7 +59,7 @@ export default function GrievanceTrack() {
         </div>
       )}
       <PageHeader
-        eyebrow={<Link to="/citizen" className="text-sm text-brand-700 hover:underline">← {t("myGrievances")}</Link>}
+        eyebrow={<Link to="/citizen/grievances" className="text-sm text-brand-700 hover:underline">← {t("myGrievances")}</Link>}
         title={g.title}
         subtitle={<span className="font-mono">{g.public_id}</span>}
         actions={<StatusBadge status={g.status} />}

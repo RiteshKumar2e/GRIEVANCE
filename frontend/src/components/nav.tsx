@@ -138,7 +138,7 @@ export const NAV: Record<Role, NavGroup[]> = {
     {
       label: "Operations",
       items: [
-        { to: "/admin/grievances", label: "Grievance Management", icon: NavIcons.folder, match: ["/officer/review", "/officer/department"] },
+        { to: "/admin/grievances", label: "Grievance Management", icon: NavIcons.folder, match: ["/admin/review", "/officer/review", "/officer/department"] },
         { to: "/admin/audit", label: "Audit Logs", icon: NavIcons.audit },
       ],
     },

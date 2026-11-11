@@ -3,7 +3,9 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { HBarChart, TrendChart } from "../../components/charts";
 import { Card, ErrorState, PageHeader, SkeletonRows, StatTile, Tabs } from "../../components/ui";
+import { useSystemStatus } from "../../components/AppShell";
 import { api } from "../../lib/api";
+import { ROLE_LABEL } from "../../lib/auth";
 import { pct, STATUS_LABEL } from "../../lib/format";
 import type { Status } from "../../lib/types";
 
@@ -34,25 +36,57 @@ export default function AdminOverview() {
   const cats = useQuery({ queryKey: ["an", "cats", inc], queryFn: () => api<{ code: string; name: string; count: number }[]>(`/analytics/categories?include_history=${inc}`) });
   const agents = useQuery({ queryKey: ["an", "agents"], queryFn: () => api<Agents>("/analytics/agents?days=30") });
   const o = ov.data;
+  const users = useQuery({ queryKey: ["admin", "users", "summary"], queryFn: () => api<{ total: number; by_role: Record<string, { active: number; inactive: number }> }>("/admin/users/summary") });
+  const status = useSystemStatus();
+  const errors = useQuery({ queryKey: ["obs", "errors", 20], queryFn: () => api<{ trace_id: string; agent: string; started_at: string }[]>("/observability/errors?limit=20") });
 
   return (
     <div>
       <PageHeader
-        title="Administration overview"
-        subtitle="Every figure below is computed live from the database."
+        title="Platform Overview"
+        subtitle="Users, grievances and system health across every department. Every figure is computed live from the database."
         actions={<Tabs value={scope} onChange={setScope} items={[{ value: "all", label: "Including history" }, { value: "live", label: "Current grievances only" }]} />}
       />
+      <div className="mb-6 grid gap-4 lg:grid-cols-[1.4fr_1fr]">
+        <Card title="Users" action={<Link to="/admin/users" className="text-[13px] font-medium text-brand-700 hover:underline">Manage users</Link>}>
+          {users.isLoading && <SkeletonRows rows={1} />}
+          {users.isError && <ErrorState error={users.error} onRetry={() => users.refetch()} />}
+          {users.data && (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+              <StatTile label="Total" value={users.data.total} />
+              {(["citizen", "officer", "dept_admin", "admin"] as const).map((r) => (
+                <StatTile key={r} label={ROLE_LABEL[r]} value={users.data.by_role[r]?.active ?? 0} hint={users.data.by_role[r]?.inactive ? `${users.data.by_role[r].inactive} inactive` : undefined} />
+              ))}
+            </div>
+          )}
+        </Card>
+        <Card title="System health" action={<Link to="/admin/integrations" className="text-[13px] font-medium text-brand-700 hover:underline">Integrations</Link>}>
+          {status.isError ? (
+            <p className="text-sm font-medium text-status-critical">The API status endpoint is not responding.</p>
+          ) : !status.data ? (
+            <SkeletonRows rows={1} />
+          ) : (
+            <dl className="divide-y divide-line text-sm">
+              <div className="flex justify-between gap-3 py-1.5"><dt className="text-ink-muted">API</dt><dd className="font-medium text-status-good">Responding</dd></div>
+              <div className="flex justify-between gap-3 py-1.5"><dt className="text-ink-muted">Language model</dt><dd className="font-medium">{status.data.llm.mode === "llm" ? status.data.llm.chain.join(" → ") : "Rule-based fallback"}</dd></div>
+              <div className="flex justify-between gap-3 py-1.5"><dt className="text-ink-muted">Database</dt><dd className="font-medium">{status.data.database.engine}</dd></div>
+              <div className="flex justify-between gap-3 py-1.5"><dt className="text-ink-muted">Agent errors (latest 20)</dt><dd className={errors.data?.length ? "font-medium text-status-critical" : "font-medium"}>{errors.data ? errors.data.length : "…"}{errors.data?.length ? <Link to="/admin/observability" className="ml-2 text-brand-700 underline">View</Link> : null}</dd></div>
+            </dl>
+          )}
+        </Card>
+      </div>
       {ov.isError && <ErrorState error={ov.error} onRetry={() => ov.refetch()} />}
       {ov.isLoading && <SkeletonRows rows={2} />}
       {o && (
         <>
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-9">
             <StatTile label="Total" value={o.total.toLocaleString("en-IN")} />
             <StatTile label="Open" value={o.open} />
             <StatTile label="Resolved / closed" value={o.resolved.toLocaleString("en-IN")} />
             <StatTile label="Awaiting review" value={o.pending_review} tone={o.pending_review ? "warning" : undefined} />
             <StatTile label="Sensitive open" value={o.sensitive_open} />
             <StatTile label="Overdue open" value={o.overdue_open} tone={o.overdue_open ? "critical" : undefined} />
+            <StatTile label="Pending escalations" value={o.escalated_open} tone={o.escalated_open ? "warning" : undefined} />
             <StatTile label="SLA compliance" value={pct(o.sla_compliance)} hint="of resolved cases" />
             <StatTile label="Median resolution" value={o.median_resolution_hours != null ? `${o.median_resolution_hours} h` : "n/a"} />
           </div>

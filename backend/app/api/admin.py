@@ -128,6 +128,11 @@ def update_officer(code: str, body: OfficerUpdate, user: User = Depends(require_
     o = db.scalar(select(Officer).where(Officer.code == code))
     if o is None:
         raise HTTPException(404, "Officer not found")
+    if body.is_active is False and o.is_active:
+        held = db.scalar(select(func.count()).select_from(Grievance).where(
+            Grievance.assigned_officer_id == o.id, Grievance.status.in_(OPEN)))
+        if held:
+            raise HTTPException(422, f"{o.code} still holds {held} open case(s). Reassign them before deactivating the officer.")
     for k, v in body.model_dump(exclude_none=True).items():
         setattr(o, k, v)
     if body.is_active is not None and o.user:
@@ -444,9 +449,12 @@ def update_department(code: str, body: DepartmentUpdate, user: User = Depends(re
 # ---------------------------------------------------------------- runtime settings (read-only, no secrets)
 @router.get("/settings")
 def runtime_settings(_: User = Depends(require_admin)):
+    from app.services.grievances import POLICY_TEXT
+
     s = get_settings()
     return {
         "environment": s.app_env,
+        "policy_rules": POLICY_TEXT,
         "policy": {"default_confidence_threshold": s.default_confidence_threshold, "duplicate_threshold": s.duplicate_threshold,
                    "duplicate_window_days": s.duplicate_window_days, "duplicate_radius_km": s.duplicate_radius_km,
                    "sla_warning_fraction": s.sla_warning_fraction, "auto_close_after_days": s.auto_close_after_days},

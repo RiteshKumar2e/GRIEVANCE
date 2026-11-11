@@ -31,6 +31,7 @@ export function DataTable<T>({
   initialSort,
   caption,
   minWidth = 860,
+  paginate = true,
 }: {
   rows: T[] | undefined;
   columns: Column<T>[];
@@ -44,6 +45,8 @@ export function DataTable<T>({
   initialSort?: { key: string; dir: Dir };
   caption: string;
   minWidth?: number;
+  /** false when the API already pages the rows (the caller renders its own Pagination). */
+  paginate?: boolean;
 }) {
   const [sort, setSort] = useState<{ key: string; dir: Dir } | undefined>(initialSort);
   const [page, setPage] = useState(0);
@@ -64,11 +67,12 @@ export function DataTable<T>({
     });
   }, [rows, columns, sort]);
 
-  const pages = Math.max(1, Math.ceil(sorted.length / pageSize));
+  const size = paginate ? pageSize : Math.max(1, sorted.length);
+  const pages = Math.max(1, Math.ceil(sorted.length / size));
   // Back to page 1 when the result set or ordering changes (not on background refetches of the same data).
   useEffect(() => setPage(0), [rows?.length, sort?.key, sort?.dir]);
   const current = Math.min(page, pages - 1);
-  const visible = sorted.slice(current * pageSize, current * pageSize + pageSize);
+  const visible = sorted.slice(current * size, current * size + size);
 
   if (loading) return <SkeletonRows rows={6} />;
   if (error) return <ErrorState error={error} onRetry={onRetry} />;
@@ -135,7 +139,7 @@ export function DataTable<T>({
         ))}
       </ul>
 
-      <Pagination page={current} pages={pages} total={sorted.length} pageSize={pageSize} onPage={setPage} />
+      {paginate && <Pagination page={current} pages={pages} total={sorted.length} pageSize={pageSize} onPage={setPage} />}
     </div>
   );
 }

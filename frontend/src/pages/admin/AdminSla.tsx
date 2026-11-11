@@ -72,7 +72,7 @@ export default function AdminSla() {
               <tbody className="divide-y divide-line">
                 {sla.data.watchlist.map((w) => (
                   <tr key={w.public_id}>
-                    <td className="py-2"><Link className="font-mono text-xs font-semibold text-brand-700 hover:underline" to={`/officer/grievances/${w.public_id}`}>{w.public_id}</Link><p className="max-w-xs truncate">{w.title}</p></td>
+                    <td className="py-2"><Link className="font-mono text-xs font-semibold text-brand-700 hover:underline" to={`/admin/grievances/${w.public_id}`}>{w.public_id}</Link><p className="max-w-xs truncate">{w.title}</p></td>
                     <td className="py-2">{w.department}</td>
                     <td className="py-2">{w.state === "breached" ? <Badge tone="critical">Breached</Badge> : <Badge tone="warning">At risk</Badge>}</td>
                     <td className="py-2 tabular-nums">{fmtDate(w.due_at)}</td>

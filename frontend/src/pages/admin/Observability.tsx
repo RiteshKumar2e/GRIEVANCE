@@ -103,7 +103,7 @@ function TracePanel({ traceId }: { traceId: string }) {
       }
     >
       <dl className="mb-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
-        <div><dt className="text-xs text-ink-muted">Grievance</dt><dd>{t.grievance_id ? <Link className="font-mono text-brand-700 hover:underline" to={`/officer/grievances/${t.grievance_id}`}>{t.grievance_id}</Link> : "n/a"}</dd></div>
+        <div><dt className="text-xs text-ink-muted">Grievance</dt><dd>{t.grievance_id ? <Link className="font-mono text-brand-700 hover:underline" to={`/admin/grievances/${t.grievance_id}`}>{t.grievance_id}</Link> : "n/a"}</dd></div>
         <div><dt className="text-xs text-ink-muted">Started</dt><dd>{fmtDate(t.started_at)}</dd></div>
         <div><dt className="text-xs text-ink-muted">Duration</dt><dd className="tabular-nums">{t.duration_ms ?? "n/a"} ms</dd></div>
         <div><dt className="text-xs text-ink-muted">Steps</dt><dd className="tabular-nums">{t.steps.length}</dd></div>
