@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link2, Search, TrendingUp } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { ConfidenceMeter, SensitiveBadge, SlaIndicator, SourceBadge, StatusBadge, UrgencyBadge } from "../../components/domain";
+import { IconSearch } from "../../components/icons";
 import { EmptyState, ErrorState, Input, PageHeader, Select, SkeletonRows, StatTile } from "../../components/ui";
 import { api } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
@@ -52,10 +52,10 @@ export default function OfficerQueue({ scope }: { scope: Scope }) {
         </div>
       )}
 
-      <div className="mb-4 grid gap-2 rounded-lg border border-line bg-white p-3 sm:grid-cols-2 lg:grid-cols-[1.4fr_repeat(4,1fr)]">
+      <div className="mb-4 grid gap-2 rounded-lg border border-line bg-surface p-3 sm:grid-cols-2 lg:grid-cols-[1.4fr_repeat(4,1fr)]">
         <label className="relative">
           <span className="sr-only">Search</span>
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" aria-hidden />
+          <IconSearch width={16} height={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" />
           <Input className="pl-9" placeholder="Search ID, title, location" value={filters.q} onChange={set("q")} />
         </label>
         {scope !== "review" && (
@@ -88,9 +88,9 @@ export default function OfficerQueue({ scope }: { scope: Scope }) {
         <EmptyState title={scope === "review" ? "Nothing awaiting review" : "No grievances match"} body={scope === "review" ? "Every flagged grievance has a human decision." : "Try clearing the filters."} />
       )}
       {!!q.data?.length && (
-        <div className="overflow-x-auto rounded-lg border border-line bg-white">
+        <div className="overflow-x-auto rounded-lg border border-line bg-surface">
           <table className="w-full min-w-[880px] text-sm">
-            <thead className="border-b border-line bg-canvas text-left text-xs uppercase tracking-wide text-ink-muted">
+            <thead className="border-b border-line text-left text-[12px] uppercase tracking-[0.06em] text-ink-muted">
               <tr>
                 <th className="px-4 py-2.5 font-semibold">Grievance</th>
                 <th className="px-3 py-2.5 font-semibold">Status</th>
@@ -102,7 +102,7 @@ export default function OfficerQueue({ scope }: { scope: Scope }) {
             </thead>
             <tbody className="divide-y divide-line">
               {q.data.map((g) => (
-                <tr key={g.public_id} className="hover:bg-canvas">
+                <tr key={g.public_id} className="hover:bg-black/[0.02]">
                   <td className="max-w-md px-4 py-3">
                     <Link to={`/officer/grievances/${g.public_id}`} className="group block">
                       <div className="flex flex-wrap items-center gap-1.5">
@@ -110,12 +110,12 @@ export default function OfficerQueue({ scope }: { scope: Scope }) {
                         {g.is_sensitive && <SensitiveBadge />}
                         {g.escalation_level > 0 && (
                           <span className="inline-flex items-center gap-0.5 text-xs font-semibold text-orange-800">
-                            <TrendingUp className="h-3 w-3" aria-hidden /> L{g.escalation_level}
+                            Escalated L{g.escalation_level}
                           </span>
                         )}
                         {g.duplicate_group && (
                           <span className="inline-flex items-center gap-0.5 text-xs text-brand-700" title={`Linked group ${g.duplicate_group}`}>
-                            <Link2 className="h-3 w-3" aria-hidden /> linked
+                            Linked
                           </span>
                         )}
                         <SourceBadge source={g.data_source} />

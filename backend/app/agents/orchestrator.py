@@ -26,7 +26,7 @@ from app.models import Grievance, GrievanceCategory, IntakeDraft, SlaRecord, Use
 from app.models.enums import AI_ACTOR, OPEN_STATUSES, ActorType, DataSource, GrievanceStatus, SlaState
 from app.services import audit, geo, notifications
 from app.services.grievances import new_public_id, record_initial_status, transition
-from app.services.tracing import Tracer, export_to_langfuse
+from app.services.tracing import Tracer
 from app.services.webhooks import grievance_payload, queue_event
 
 DRAFT_TTL_HOURS = 24
@@ -48,7 +48,8 @@ def analyze_intake(
         res = run_intake(db, text, language_hint=language_hint, location_hint=location_hint, gazetteer=geo.gazetteer())
         run.provider, run.model, run.confidence = res.provider, res.model, res.category_confidence
         run.output = {"category_code": res.category_code, "confidence": res.category_confidence, "urgency": res.urgency,
-                      "language": res.language, "method": res.method, "provider_attempts": res.provider_attempts}
+                      "language": res.language, "method": res.method, "provider_attempts": res.provider_attempts,
+                      "reasoning": res.reasoning}
 
     category = _category(db, res.category_code)
     with tracer.step("policy_preview", {"category_code": category.code}) as run:
@@ -57,7 +58,8 @@ def analyze_intake(
                                    sensitive_signals=res.sensitive_signals, llm_used=res.provider != FALLBACK_PROVIDER)
         run.provider, run.model, run.confidence = "policy-gate", "deterministic-v1", decision.confidence
         run.output = {"requires_human_review": decision.requires_human_review, "review_reasons": decision.review_reasons,
-                      "policy_refs": decision.policy_refs, "is_sensitive": decision.is_sensitive, "sla_hours": decision.sla_hours}
+                      "policy_refs": decision.policy_refs, "is_sensitive": decision.is_sensitive, "sla_hours": decision.sla_hours,
+                      "reasoning": decision.reasoning}
     tracer.finish()
 
     lat, lon = geo.centroid(res.ward)
@@ -148,7 +150,8 @@ def run_pipeline(db: Session, g: Grievance, *, intake: dict[str, Any]) -> dict[s
         with tracer.step("intake", {"language": g.language, "input_mode": g.input_mode}) as run:
             run.provider, run.model, run.confidence = provider, model, g.ai_confidence
             run.output = {"category_code": g.category.code, "confidence": g.ai_confidence, "urgency": g.urgency,
-                          "language": g.language, "provider_attempts": intake.get("provider_attempts", [])}
+                          "language": g.language, "provider_attempts": intake.get("provider_attempts", []),
+                          "reasoning": intake.get("reasoning", [])}
         audit.record_ai(db, action="intake.classification", grievance=g, provider=provider, model=model,
                         confidence=g.ai_confidence or 0.0, trace_id=tracer.trace_id,
                         explanation={"category": g.category.code, "urgency": g.urgency, "language": g.language,
@@ -167,12 +170,13 @@ def run_pipeline(db: Session, g: Grievance, *, intake: dict[str, Any]) -> dict[s
                 decision.allowed_ai_actions = [a for a in decision.allowed_ai_actions if a != "assign_officer"]
             g.is_sensitive, g.identity_hidden = decision.is_sensitive, decision.hide_identity
             g.needs_human_review, g.review_reasons = decision.requires_human_review, decision.review_reasons
-            g.sla_due_at, g.policy_explanation = decision.sla_due_at, decision.explanation()
+            g.sla_due_at = decision.sla_due_at
+            g.policy_explanation = {**decision.explanation(), "intake_reasoning": intake.get("reasoning", [])}
             run.provider, run.model, run.confidence = "policy-gate", "deterministic-v1", decision.confidence
             run.output = {"requires_human_review": decision.requires_human_review, "review_reasons": decision.review_reasons,
                           "policy_refs": decision.policy_refs, "is_sensitive": decision.is_sensitive,
                           "hide_identity": decision.hide_identity, "sla_hours": decision.sla_hours,
-                          "department_code": decision.department_code}
+                          "department_code": decision.department_code, "reasoning": decision.reasoning}
         audit.record_ai(db, action="policy.decision", grievance=g, provider="policy-gate", model="deterministic-v1",
                         confidence=decision.confidence, explanation=decision.explanation(), policy_refs=decision.policy_refs,
                         trace_id=tracer.trace_id)
@@ -187,7 +191,13 @@ def run_pipeline(db: Session, g: Grievance, *, intake: dict[str, Any]) -> dict[s
             run.confidence = precedents[0].similarity if precedents else 0.0
             run.references = [p.grievance.public_id for p in precedents]
             run.output = {"retrieved": len(precedents), "scope": precedents[0].scope if precedents else None,
-                          "guidance": rag.guidance(precedents)}
+                          "guidance": rag.guidance(precedents),
+                          "reasoning": [
+                              f"Embedded grievance with {g.embedding_model}",
+                              "Searched resolved grievances, widening category -> department -> all until 5 found",
+                              *[f"#{i} {p.grievance.public_id} similarity {p.similarity:.2f} ({p.scope} match)" for i, p in enumerate(precedents, 1)],
+                              "Precedents are supporting evidence only (POL-RAG-01)",
+                          ] if precedents else ["No resolved grievance passed the minimum similarity of 0.15"]}
         if precedents:
             audit.record_ai(db, action="rag.precedents", grievance=g, provider="local-embeddings", model=g.embedding_model,
                             confidence=precedents[0].similarity, trace_id=tracer.trace_id, policy_refs=["POL-RAG-01"],
@@ -201,8 +211,18 @@ def run_pipeline(db: Session, g: Grievance, *, intake: dict[str, Any]) -> dict[s
             run.provider, run.model = "duplicate-scorer", "weighted-v1"
             run.confidence = matches[0].score if matches else 0.0
             run.references = [m.grievance.public_id for m in matches]
+            thr, min_sem = duplicate.thresholds(g.embedding_model)
             run.output = {"duplicates_found": len(matches), "group_id": group.public_id if group else None,
-                          "signals": matches[0].signals if matches else None}
+                          "signals": matches[0].signals if matches else None,
+                          "reasoning": [
+                              f"Compared with open, non-historical grievances of the same department in the last {get_settings().duplicate_window_days} days",
+                              "Score = 0.55 semantic + 0.20 geography + 0.15 time + 0.10 category; "
+                              f"link if score >= {thr:.2f} and semantic >= {min_sem:.2f}",
+                              *[f"{m.grievance.public_id}: score {m.score:.2f} (semantic {m.signals['semantic']:.2f}, geo {m.signals['geo']:.2f}, "
+                                f"time {m.signals['time']:.2f})" for m in matches],
+                              (f"Linked into group {group.public_id}; every grievance keeps its own ID and status (POL-DUP-01)" if group
+                               else "No duplicate above threshold; grievance stands alone"),
+                          ]}
         if group:
             audit.record_ai(db, action="duplicate.linked", grievance=g, provider="duplicate-scorer", model="weighted-v1",
                             confidence=matches[0].score, trace_id=tracer.trace_id, policy_refs=["POL-DUP-01"],
@@ -217,14 +237,29 @@ def run_pipeline(db: Session, g: Grievance, *, intake: dict[str, Any]) -> dict[s
             rec = predictive.create_sla_record(db, g, decision.sla_hours, decision.sla_due_at)
             run.provider, run.model = "sla-predictor", "historical-quantile-v1"
             run.confidence = 1.0 - abs(0.5 - (rec.breach_probability or 0)) if rec.breach_probability is not None else None
+            b = rec.prediction_basis
             run.output = {"predicted_resolution_hours": rec.predicted_resolution_hours, "breach_probability": rec.breach_probability,
-                          "state": rec.state, "estimate_label": rec.prediction_basis.get("estimate_label")}
+                          "state": rec.state, "estimate_label": b.get("estimate_label"),
+                          "reasoning": [
+                              f"Historical resolution times used: {b.get('sample_size')} cases ({b.get('basis')} level)",
+                              f"Department load {b.get('department_load', {}).get('open')} open / {b.get('department_load', {}).get('capacity')} capacity "
+                              f"-> load factor {b.get('load_factor')}",
+                              f"Predicted resolution {rec.predicted_resolution_hours} h vs SLA {decision.sla_hours} h; "
+                              f"breach probability {rec.breach_probability:.0%}",
+                              b.get("estimate_label") or "",
+                          ]}
 
         # Agent 6 — actions
         with tracer.step("actions", {"requires_human_review": decision.requires_human_review}) as run:
             out = actions.assign(db, g, decision, provider=provider, model=model, trace_id=tracer.trace_id)
             run.provider, run.model, run.confidence = "action-executor", "policy-bound-v1", decision.confidence
-            run.output = {"actions": out["actions"], "status": out["status"]}
+            run.output = {"actions": out["actions"], "status": out["status"],
+                          "reasoning": [
+                              f"Policy gate allowed: {', '.join(decision.allowed_ai_actions)}",
+                              (f"Assigned officer {out['officer']} (least-loaded, ward-aware)" if out.get("officer")
+                               else "Routed to human review; department reviewers notified"),
+                              "Wrote status history, audit events, citizen notification and webhook events in one transaction",
+                          ]}
         notifications.notify_citizen(
             db, g, "submitted", f"Grievance {g.public_id} registered",
             ("Your grievance has been registered and is being reviewed by an officer."
@@ -238,8 +273,6 @@ def run_pipeline(db: Session, g: Grievance, *, intake: dict[str, Any]) -> dict[s
     except Exception:
         tracer.finish("error")
         raise
-    finally:
-        export_to_langfuse(tracer.trace)
     return result
 
 

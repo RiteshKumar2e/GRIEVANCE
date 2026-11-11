@@ -63,6 +63,7 @@ class Tracer:
         self.trace.ended_at = utcnow()
         self.trace.duration_ms = int((time.perf_counter() - self._t0) * 1000)
         self.db.flush()
+        export_to_langfuse(self.trace)  # no-op unless Langfuse keys are configured
         return self.trace
 
 
@@ -95,37 +96,106 @@ PUBLIC_OUTPUT_KEYS = {
     "review_reasons", "policy_refs", "is_sensitive", "hide_identity", "sla_hours", "retrieved", "scope",
     "duplicates_found", "group_id", "predicted_resolution_hours", "breach_probability", "state",
     "actions", "status", "provider_attempts", "scanned", "at_risk", "breached", "escalated",
+    "reasoning", "estimate_label", "ready", "missing", "method",
 }
+
+_project_cache: dict[str, str] = {}
+
+
+def _lf_auth() -> dict[str, str]:
+    s = get_settings()
+    token = base64.b64encode(f"{s.langfuse_public_key}:{s.langfuse_secret_key}".encode()).decode()
+    return {"Authorization": f"Basic {token}"}
+
+
+def langfuse_project_id() -> str | None:
+    """Resolve the Langfuse project id for the configured keys (needed to build a real trace URL)."""
+    s = get_settings()
+    if not s.langfuse_enabled:
+        return None
+    if s.langfuse_public_key in _project_cache:
+        return _project_cache[s.langfuse_public_key]
+    try:
+        r = httpx.get(f"{s.langfuse_host.rstrip('/')}/api/public/projects", headers=_lf_auth(), timeout=5.0)
+        if r.status_code == 200:
+            data = r.json().get("data") or []
+            if data and data[0].get("id"):
+                _project_cache[s.langfuse_public_key] = data[0]["id"]
+                return data[0]["id"]
+        log.warning("Langfuse project lookup returned %s", r.status_code)
+    except (httpx.HTTPError, ValueError) as exc:
+        log.warning("Langfuse project lookup failed: %s", type(exc).__name__)
+    return None
+
+
+def langfuse_check() -> dict[str, Any]:
+    s = get_settings()
+    if not s.langfuse_enabled:
+        return {"enabled": False, "ok": False, "detail": "LANGFUSE_PUBLIC_KEY / LANGFUSE_SECRET_KEY not set in backend/.env"}
+    pid = langfuse_project_id()
+    return {"enabled": True, "ok": pid is not None, "host": s.langfuse_host, "project_id": pid,
+            "detail": "Credentials verified" if pid else "Could not authenticate with Langfuse (check keys and host)"}
+
+
+def _iso(dt) -> str | None:
+    from app.core.time import as_aware
+
+    dt = as_aware(dt)
+    return dt.isoformat() if dt else None
 
 
 def export_to_langfuse(trace: AgentTrace) -> str | None:
-    """Best-effort push of a redacted, public trace to Langfuse's ingestion API."""
+    """Push a redacted, public trace to Langfuse: one trace, one span per agent step (LLM steps as
+    generations) with inputs, structured outputs, reasoning trail, model, confidence and timing.
+
+    Returns the real Langfuse trace URL, or None when Langfuse is not configured or the push failed."""
+    from datetime import timedelta
+
     s = get_settings()
     if not s.langfuse_enabled:
         return None
     pv = public_view(trace)
+    now = utcnow().isoformat()
+    first_input = redact(trace.runs[0].input_summary) if trace.runs else {}
+    last_output = pv["steps"][-1]["decision"] if pv["steps"] else {}
     events: list[dict[str, Any]] = [{
-        "id": uuid.uuid4().hex, "timestamp": utcnow().isoformat(), "type": "trace-create",
-        "body": {"id": trace.trace_id, "name": trace.name, "public": True,
-                 "metadata": {"app": "GRIEVANCE", "status": trace.status}, "output": {"steps": len(pv["steps"])}},
+        "id": uuid.uuid4().hex, "timestamp": now, "type": "trace-create",
+        "body": {"id": trace.trace_id, "name": trace.name, "public": True, "timestamp": _iso(trace.started_at),
+                 "input": first_input, "output": last_output, "tags": ["GRIEVANCE", trace.name],
+                 "metadata": {"app": "GRIEVANCE", "status": trace.status, "duration_ms": trace.duration_ms,
+                              "privacy": "PII-redacted; structured decisions only, no raw model chain-of-thought"}},
     }]
-    for st in pv["steps"]:
-        events.append({
-            "id": uuid.uuid4().hex, "timestamp": utcnow().isoformat(), "type": "span-create",
-            "body": {"id": uuid.uuid4().hex, "traceId": trace.trace_id, "name": st["agent"],
-                     "metadata": {"provider": st["provider"], "model": st["model"], "confidence": st["confidence"],
-                                  "duration_ms": st["duration_ms"], "references": st["references"]},
-                     "output": st["decision"], "level": "ERROR" if st["error"] else "DEFAULT"},
-        })
-    auth = base64.b64encode(f"{s.langfuse_public_key}:{s.langfuse_secret_key}".encode()).decode()
+    for run, st in zip(trace.runs, pv["steps"]):
+        start = run.started_at
+        end = start + timedelta(milliseconds=run.duration_ms or 0) if start else None
+        is_llm = (run.provider or "") in {"groq", "gemini"}
+        body = {
+            "id": uuid.uuid4().hex, "traceId": trace.trace_id, "name": st["agent"],
+            "startTime": _iso(start), "endTime": _iso(end),
+            "input": redact(run.input_summary or {}), "output": st["decision"],
+            "metadata": {"provider": st["provider"], "model": st["model"], "confidence": st["confidence"],
+                         "duration_ms": st["duration_ms"], "references": st["references"]},
+            "level": "ERROR" if st["error"] else "DEFAULT",
+            "statusMessage": (run.error or "")[:300] or None,
+        }
+        if is_llm:
+            body["model"] = run.model
+        events.append({"id": uuid.uuid4().hex, "timestamp": now, "type": "generation-create" if is_llm else "span-create", "body": body})
     try:
         r = httpx.post(f"{s.langfuse_host.rstrip('/')}/api/public/ingestion", json={"batch": events},
-                       headers={"Authorization": f"Basic {auth}"}, timeout=5.0)
-        if r.status_code < 300:
-            url = f"{s.langfuse_host.rstrip('/')}/trace/{trace.trace_id}"
-            trace.langfuse_url = url
-            return url
-        log.warning("Langfuse ingestion returned %s", r.status_code)
+                       headers=_lf_auth(), timeout=8.0)
+        errors = []
+        try:
+            errors = r.json().get("errors") or []
+        except ValueError:
+            pass
+        if r.status_code < 300 and not errors:
+            pid = langfuse_project_id()
+            if pid:
+                trace.langfuse_url = f"{s.langfuse_host.rstrip('/')}/project/{pid}/traces/{trace.trace_id}"
+                return trace.langfuse_url
+            return None
+        log.warning("Langfuse ingestion returned %s with %d errors", r.status_code, len(errors))
     except httpx.HTTPError as exc:
         log.warning("Langfuse export failed: %s", type(exc).__name__)
     return None

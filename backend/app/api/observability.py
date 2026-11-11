@@ -10,7 +10,7 @@ from app.core.deps import require_admin
 from app.core.time import as_aware
 from app.db.session import get_db
 from app.models import AgentRun, AgentTrace, Grievance, User
-from app.services.tracing import ensure_share_token, public_view
+from app.services.tracing import ensure_share_token, langfuse_check, public_view
 
 router = APIRouter(prefix="/observability", tags=["observability"])
 public_router = APIRouter(prefix="/public", tags=["public"])
@@ -76,6 +76,12 @@ def unshare_trace(trace_id: str, _: User = Depends(require_admin), db: Session =
         raise HTTPException(404, "Trace not found")
     t.share_token = None
     db.commit()
+
+
+@router.get("/langfuse")
+def langfuse_status(_: User = Depends(require_admin)):
+    """Verify the configured Langfuse credentials (no trace data is sent)."""
+    return langfuse_check()
 
 
 @router.get("/errors")

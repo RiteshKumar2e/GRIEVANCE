@@ -1,27 +1,41 @@
 /** @type {import('tailwindcss').Config} */
+// Design tokens. Warm paper neutrals, near-black ink, one civic-blue accent.
+// Hierarchy comes from type and spacing; corners are small and shadows are reserved for overlays.
 export default {
   content: ["./index.html", "./src/**/*.{ts,tsx}"],
   theme: {
     extend: {
       fontFamily: {
-        sans: ['"Inter"', '"Noto Sans Devanagari"', "system-ui", "sans-serif"],
-        display: ['"Source Serif 4"', "Georgia", "serif"],
+        sans: ['"IBM Plex Sans"', '"Noto Sans Devanagari"', "system-ui", "-apple-system", "Segoe UI", "sans-serif"],
+        display: ['"Source Serif 4"', '"Noto Serif Devanagari"', "Georgia", "serif"],
+        mono: ['"IBM Plex Mono"', "ui-monospace", "SFMono-Regular", "Consolas", "monospace"],
       },
       colors: {
-        // Civic navy primary, used sparingly; neutrals carry most of the UI.
+        // Single accent: civic blue. Lighter steps are tints for selected states only.
         brand: {
-          50: "#eef3fb", 100: "#d9e4f5", 200: "#b3c8eb", 300: "#86a6dc", 400: "#5a82c9",
-          500: "#3a64b1", 600: "#2a4f94", 700: "#223f77", 800: "#1c3260", 900: "#15264a",
+          50: "#EEF2F8", 100: "#DCE5F1", 200: "#B7C8E2", 300: "#8AA6CF", 400: "#5A80B8",
+          500: "#2F5F9E", 600: "#244E86", 700: "#1D416F", 800: "#17345A", 900: "#112846",
         },
-        saffron: { 50: "#fff7ed", 100: "#ffedd5", 500: "#e8892b", 600: "#c96f17", 700: "#9a5212" },
-        ink: { DEFAULT: "#16181d", soft: "#3d424d", muted: "#6b7180" },
-        line: "#e3e5ea",
-        canvas: "#f6f7f9",
-        status: { good: "#0ca30c", warning: "#fab219", serious: "#ec835a", critical: "#d03b3b" },
+        // Reserved for the SYNTHETIC-data notice (a caution signal, not decoration).
+        saffron: { 50: "#FBF3E6", 100: "#F3E0BF", 500: "#B9701D", 600: "#985B15", 700: "#7A4810" },
+        ink: { DEFAULT: "#1B1D21", soft: "#3E4148", muted: "#5D6068" },
+        line: "#DFDBD1",
+        canvas: "#F6F4EF", // page background (warm paper, never pure white)
+        surface: "#FCFBF8", // raised surfaces
+        status: { good: "#1E7B34", warning: "#9A6A00", serious: "#B4532A", critical: "#B42828" },
+      },
+      borderRadius: {
+        DEFAULT: "3px",
+        sm: "2px",
+        md: "4px",
+        lg: "5px",
+        xl: "6px",
       },
       boxShadow: {
-        card: "0 1px 2px rgba(16,24,40,.04), 0 1px 3px rgba(16,24,40,.06)",
+        card: "none",
+        overlay: "0 12px 32px rgba(27, 29, 33, 0.14)",
       },
+      maxWidth: { prose: "68ch" },
     },
   },
   plugins: [],

@@ -1,5 +1,4 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Upload } from "lucide-react";
 import { useState } from "react";
 import { Alert, Badge, Button, Card, ErrorState, Field, PageHeader, Select, SkeletonRows } from "../../components/ui";
 import { api } from "../../lib/api";
@@ -85,7 +84,7 @@ export default function AdminDatasets() {
             </label>
             <div className="flex gap-2">
               <Button variant="secondary" disabled={!file} loading={upload.isPending && upload.variables === true} onClick={() => upload.mutate(true)}>Validate (dry run)</Button>
-              <Button disabled={!file} loading={upload.isPending && upload.variables === false} onClick={() => upload.mutate(false)}><Upload className="h-4 w-4" aria-hidden /> Import</Button>
+              <Button disabled={!file} loading={upload.isPending && upload.variables === false} onClick={() => upload.mutate(false)}>Import</Button>
             </div>
             {upload.error && <Alert tone="critical">{upload.error.message}</Alert>}
             {r && (

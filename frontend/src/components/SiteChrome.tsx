@@ -1,4 +1,3 @@
-import { Cookie } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { getConsent, setConsent, trackPageView } from "../lib/consent";
@@ -6,7 +5,7 @@ import { SUPPORT_EMAIL } from "../lib/meta";
 
 export function SiteFooter({ compact = false }: { compact?: boolean }) {
   return (
-    <footer className="border-t border-line bg-white">
+    <footer className="border-t border-line bg-canvas">
       <div className={`mx-auto flex max-w-7xl flex-col gap-3 px-4 text-xs text-ink-muted sm:flex-row sm:items-center sm:justify-between ${compact ? "py-4" : "py-6"}`}>
         <p>GRIEVANCE · built for HackFusion 4 · demo deployment with SYNTHETIC data</p>
         <nav aria-label="Legal" className="flex flex-wrap gap-x-4 gap-y-1">
@@ -42,8 +41,7 @@ export function ConsentBanner() {
   };
   return (
     <div role="dialog" aria-modal="false" aria-labelledby="consent-title" className="fixed inset-x-0 bottom-0 z-50 p-3 sm:p-4">
-      <div className="mx-auto flex max-w-3xl flex-col gap-3 rounded-lg border border-line bg-white p-4 shadow-xl sm:flex-row sm:items-center">
-        <Cookie className="hidden h-6 w-6 shrink-0 text-brand-700 sm:block" aria-hidden />
+      <div className="mx-auto flex max-w-3xl flex-col gap-3 rounded-lg border border-line bg-surface p-4 shadow-overlay sm:flex-row sm:items-center">
         <div className="flex-1 text-sm">
           <p id="consent-title" className="font-semibold text-ink">Your privacy</p>
           <p className="mt-0.5 text-ink-soft">
@@ -56,7 +54,7 @@ export function ConsentBanner() {
           <button onClick={() => choose("declined")} className="h-9 rounded-md border border-line px-3 text-sm font-medium text-ink hover:bg-canvas">
             Essential only
           </button>
-          <button onClick={() => choose("accepted")} className="h-9 rounded-md bg-brand-800 px-3 text-sm font-medium text-white hover:bg-brand-900">
+          <button onClick={() => choose("accepted")} className="h-9 rounded-md bg-brand-700 px-3 text-sm font-medium text-white hover:bg-brand-800">
             Accept analytics
           </button>
         </div>

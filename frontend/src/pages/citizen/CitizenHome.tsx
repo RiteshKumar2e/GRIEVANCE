@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { ChevronRight, Plus } from "lucide-react";
 import { Link } from "react-router-dom";
 import { SlaIndicator, StatusBadge } from "../../components/domain";
+import { IconChevron } from "../../components/icons";
 import { Button, EmptyState, ErrorState, PageHeader, SkeletonRows } from "../../components/ui";
 import { api } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
@@ -24,7 +24,7 @@ export default function CitizenHome() {
         actions={
           <Link to="/citizen/new">
             <Button variant="accent">
-              <Plus className="h-4 w-4" aria-hidden /> {t("fileComplaint")}
+              {t("fileComplaint")}
             </Button>
           </Link>
         }
@@ -41,10 +41,10 @@ export default function CitizenHome() {
               <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">
                 {sec.label} · {sec.rows.length}
               </h2>
-              <ul className="divide-y divide-line overflow-hidden rounded-lg border border-line bg-white">
+              <ul className="divide-y divide-line overflow-hidden rounded-lg border border-line bg-surface">
                 {sec.rows.map((g) => (
                   <li key={g.public_id}>
-                    <Link to={`/citizen/grievances/${g.public_id}`} className="flex items-center gap-4 px-4 py-3.5 hover:bg-canvas">
+                    <Link to={`/citizen/grievances/${g.public_id}`} className="flex items-center gap-4 px-4 py-3.5 hover:bg-black/[0.02]">
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="font-mono text-xs text-ink-muted">{g.public_id}</span>
@@ -57,7 +57,7 @@ export default function CitizenHome() {
                         </p>
                       </div>
                       <div className="hidden sm:block">{g.status !== "CLOSED" && g.status !== "RESOLVED" && <SlaIndicator sla={g.sla} compact />}</div>
-                      <ChevronRight className="h-4 w-4 text-ink-muted" aria-hidden />
+                      <IconChevron width={16} height={16} className="text-ink-muted" />
                     </Link>
                   </li>
                 ))}

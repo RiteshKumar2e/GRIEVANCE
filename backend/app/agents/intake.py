@@ -54,6 +54,7 @@ class IntakeResult:
     key_facts: list[str] = field(default_factory=list)
     injection_suspected: bool = False
     sensitive_signals: list[str] = field(default_factory=list)
+    reasoning: list[str] = field(default_factory=list)  # inspectable step-by-step decision trail
     provider: str = FALLBACK_PROVIDER
     model: str = FALLBACK_MODEL
     provider_attempts: list[dict[str, Any]] = field(default_factory=list)
@@ -98,6 +99,22 @@ def keyword_scores(text: str, categories: list[GrievanceCategory]) -> dict[str, 
         # mentions a bus stop is not filed under transport.
         scores[c.code] = score * (2.5 if c.is_sensitive else 1.0)
     return scores
+
+
+def matched_keywords(text: str, category: GrievanceCategory | None) -> list[str]:
+    if category is None:
+        return []
+    t = _norm(text)
+    out = []
+    for lang in ("en", "hi", "mr"):
+        for k in (category.keywords or {}).get(lang, []):
+            k = _norm(k)
+            if not k:
+                continue
+            hit = re.search(rf"\b{re.escape(k)}(s|es|ed|ing|ment)?\b", t) if re.search(r"[a-z]", k) else (k in t)
+            if hit:
+                out.append(k)
+    return out[:8]
 
 
 def sensitive_signal(text: str, categories: list[GrievanceCategory]) -> list[str]:
@@ -171,7 +188,9 @@ SYSTEM_PROMPT = (
     "- confidence is your probability (0-1) that the category is correct. Be calibrated; ambiguous text means low confidence.\n"
     "- Do not decide legal liability, guilt, rejection or closure. Do not add facts that are not in the complaint.\n"
     "- summary_en: one neutral English sentence an officer can act on. title: max 10 words in English.\n"
-    "- location_text: the place mentioned in the complaint, or empty string."
+    "- location_text: the place mentioned in the complaint, or empty string.\n"
+    "- rationale: 1-3 short sentences explaining which words or facts led to the category and urgency. "
+    "This is shown to auditors, so be factual and do not repeat personal details."
 )
 
 
@@ -187,6 +206,7 @@ def _schema(codes: list[str]) -> dict[str, Any]:
             "summary_en": {"type": "string", "maxLength": 400},
             "location_text": {"type": "string", "maxLength": 200},
             "key_facts": {"type": "array", "items": {"type": "string"}, "maxItems": 6},
+            "rationale": {"type": "string", "maxLength": 600},
         },
         "required": ["category_code", "confidence", "urgency", "language", "title", "summary_en", "location_text", "key_facts"],
         "additionalProperties": False,
@@ -211,6 +231,18 @@ def run_intake(
     loc_text, ward = extract_location(f"{location_hint or ''} {text}", gazetteer)
     injection = bool(INJECTION_PATTERNS.search(text or ""))
     sens = sensitive_signal(text, list(categories))
+    rule_cat = by_code.get(rule_code)
+    reasoning = [
+        f"Language detected: {language}" + (" (hint supplied)" if language_hint in {"hi", "mr", "en"} else " (script + function-word markers)"),
+        f"Rule classifier: {rule_code} at {rule_conf:.2f}"
+        + (f" — matched keywords: {', '.join(matched_keywords(text, rule_cat))}" if matched_keywords(text, rule_cat) else " — no keyword evidence, fell back to GENERAL"),
+        "Alternatives considered: " + (", ".join(f"{a['category_code']} ({a['score']:.2f})" for a in alts) or "none"),
+        f"Location: {loc_text} (ward {ward})" if loc_text else "Location: not found in text — citizen must supply it",
+    ]
+    if sens:
+        reasoning.append(f"Sensitive-category indicators present: {', '.join(sens)}")
+    if injection:
+        reasoning.append("Instruction-like text detected in the complaint (possible prompt injection) — treated as data only")
 
     category_list = "\n".join(f"- {c.code}: {c.name_en} — {c.description}" for c in categories)
     if use_llm:
@@ -229,8 +261,14 @@ def run_intake(
         conf = float(d.get("confidence", 0.5))
         # Cross-check: if the deterministic classifier strongly disagrees, lower confidence
         # so the policy gate routes the case to a human.
+        reasoning.append(f"LLM ({llm.provider}/{llm.model}) proposed {code} at {float(d.get('confidence', 0.5)):.2f}")
+        if d.get("rationale"):
+            reasoning.append(f"LLM rationale: {d['rationale']}")
         if code != rule_code and rule_conf >= 0.7:
             conf = min(conf, 0.55)
+            reasoning.append(f"Disagreement with confident rule classifier ({rule_code}) — confidence capped at 0.55 so a human reviews it")
+        else:
+            reasoning.append("Rule classifier cross-check: " + ("agrees" if code == rule_code else "weak disagreement, LLM kept"))
         cat = by_code[code]
         llm_loc = (d.get("location_text") or "").strip()
         if llm_loc and not loc_text:
@@ -253,6 +291,7 @@ def run_intake(
             key_facts=d.get("key_facts", []),
             injection_suspected=injection,
             sensitive_signals=sens,
+            reasoning=reasoning,
             provider=llm.provider,
             model=llm.model,
             provider_attempts=llm.attempts,
@@ -274,6 +313,10 @@ def run_intake(
         key_facts=[],
         injection_suspected=injection,
         sensitive_signals=sens,
+        reasoning=reasoning + [
+            "LLM unavailable (" + ", ".join(f"{a['provider']}: {a['status']}" for a in llm.attempts) + ") — deterministic rules used",
+            f"Urgency: {detect_urgency(text, default_urgency)} (category default {default_urgency}, adjusted by urgency words)",
+        ],
         provider=FALLBACK_PROVIDER,
         model=FALLBACK_MODEL,
         provider_attempts=llm.attempts,

@@ -36,6 +36,7 @@ class PolicyDecision:
     allowed_ai_actions: list[str] = field(default_factory=list)
     forbidden_ai_actions: list[str] = field(default_factory=lambda: list(NEVER_AI_ACTIONS))
     auto_close_allowed: bool = False
+    reasoning: list[str] = field(default_factory=list)  # each rule checked and its outcome
 
     def explanation(self) -> dict[str, Any]:
         d = asdict(self)
@@ -62,10 +63,12 @@ def evaluate(
 
     threshold = category.confidence_threshold if category.confidence_threshold is not None else s.default_confidence_threshold
     review = False
+    trail = [f"Category Master entry {category.code}: department {category.department.code if category.department else 'none'}, "
+             f"SLA {category.sla_hours} h, sensitive={category.is_sensitive}, identity hiding={category.hide_identity}, threshold {threshold:.2f}"]
 
     if category.is_sensitive:
         review = True
-        reasons.append("Sensitive category — mandatory human review.")
+        reasons.append("Sensitive category: mandatory human review.")
         refs += ["POL-SENSITIVE-01", "POL-SENSITIVE-02"]
     if category.hide_identity:
         refs.append("POL-IDENTITY-01")
@@ -82,6 +85,10 @@ def evaluate(
         review = True
         reasons.append(f"Text contains indicators of a sensitive category ({', '.join(other_sensitive)}); a human must verify.")
         refs.append("POL-SENSITIVE-01")
+    trail.append(f"POL-SENSITIVE-01 sensitive category: {'YES, human review required' if category.is_sensitive else 'no'}")
+    trail.append(f"POL-CONF-01 confidence {confidence:.2f} vs threshold {threshold:.2f}: {'BELOW, human review required' if confidence < threshold else 'pass'}")
+    trail.append(f"POL-INJECT-01 instruction-like text: {'YES, human review required' if injection_suspected else 'none'}")
+    trail.append(f"Sensitive indicators for other categories: {', '.join(other_sensitive) if other_sensitive else 'none'}")
     if category.department_id is None:
         review = True
         reasons.append("Category has no mapped department in the Category Master.")
@@ -94,6 +101,9 @@ def evaluate(
         refs.append("POL-AUTOCLOSE-01")
 
     allowed = [a for a in BASE_AI_ACTIONS if not (review and a == "assign_officer")]
+    trail.append(f"SLA: {sla_hours} h" + (" (shortened for critical urgency)" if sla_hours != int(category.sla_hours or 72) else " from Category Master"))
+    trail.append("Outcome: " + ("route to HUMAN REVIEW; AI may not assign an officer" if review else "AI may assign department and officer"))
+    trail.append("Always forbidden for AI: " + ", ".join(NEVER_AI_ACTIONS))
     return PolicyDecision(
         category_code=category.code,
         department_id=category.department_id,
@@ -109,6 +119,7 @@ def evaluate(
         policy_refs=sorted(set(refs)),
         allowed_ai_actions=allowed,
         auto_close_allowed=auto_close,
+        reasoning=trail,
     )
 
 

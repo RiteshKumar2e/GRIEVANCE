@@ -47,11 +47,11 @@ export function trackPageView(pathname: string) {
   const body = JSON.stringify({ path });
   try {
     if (navigator.sendBeacon) {
-      navigator.sendBeacon(`${apiBase}/meta/pageview`, new Blob([body], { type: "application/json" }));
+      navigator.sendBeacon(`${apiBase}/meta/pageview`, new Blob([body], { type: "text/plain" }));
       return;
     }
   } catch {
     /* fall through */
   }
-  void fetch(`${apiBase}/meta/pageview`, { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: true }).catch(() => undefined);
+  void fetch(`${apiBase}/meta/pageview`, { method: "POST", headers: { "Content-Type": "text/plain" }, body, keepalive: true }).catch(() => undefined);
 }

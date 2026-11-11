@@ -1,5 +1,4 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertOctagon, CheckCircle2, Clock, Flame, TimerOff } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Alert, Badge, Button, Card, ErrorState, PageHeader, Select, SkeletonRows, StatTile } from "../../components/ui";
@@ -52,10 +51,10 @@ export default function AdminSla() {
       {(scan.error || close.error) && <div className="mb-4"><Alert tone="critical">{(scan.error || close.error)!.message}</Alert></div>}
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
-        <StatTile label="On track" value={<span className="inline-flex items-center gap-1.5"><Clock className="h-5 w-5 text-ink-muted" aria-hidden />{s.on_track ?? 0}</span>} />
-        <StatTile label="At risk" tone="warning" value={<span className="inline-flex items-center gap-1.5"><AlertOctagon className="h-5 w-5" aria-hidden />{s.at_risk ?? 0}</span>} />
-        <StatTile label="Breached" tone="critical" value={<span className="inline-flex items-center gap-1.5"><TimerOff className="h-5 w-5" aria-hidden />{s.breached ?? 0}</span>} />
-        <StatTile label="Met" tone="good" value={<span className="inline-flex items-center gap-1.5"><CheckCircle2 className="h-5 w-5" aria-hidden />{s.met ?? 0}</span>} />
+        <StatTile label="On track" value={s.on_track ?? 0} />
+        <StatTile label="At risk" tone="warning" value={s.at_risk ?? 0} />
+        <StatTile label="Breached" tone="critical" value={s.breached ?? 0} />
+        <StatTile label="Met" tone="good" value={s.met ?? 0} />
         <StatTile label="Resolved late" value={s.missed ?? 0} />
       </div>
       {sla.data && <p className="mt-2 text-xs text-saffron-700">{sla.data.estimate_label}</p>}
@@ -75,7 +74,7 @@ export default function AdminSla() {
                   <tr key={w.public_id}>
                     <td className="py-2"><Link className="font-mono text-xs font-semibold text-brand-700 hover:underline" to={`/officer/grievances/${w.public_id}`}>{w.public_id}</Link><p className="max-w-xs truncate">{w.title}</p></td>
                     <td className="py-2">{w.department}</td>
-                    <td className="py-2">{w.state === "breached" ? <Badge tone="critical"><TimerOff className="h-3 w-3" aria-hidden /> Breached</Badge> : <Badge tone="warning"><AlertOctagon className="h-3 w-3" aria-hidden /> At risk</Badge>}</td>
+                    <td className="py-2">{w.state === "breached" ? <Badge tone="critical">Breached</Badge> : <Badge tone="warning">At risk</Badge>}</td>
                     <td className="py-2 tabular-nums">{fmtDate(w.due_at)}</td>
                     <td className="py-2 text-right tabular-nums">{pct(w.breach_probability)}</td>
                     <td className="py-2 text-right tabular-nums">{w.predicted_resolution_hours ?? "—"}</td>
@@ -108,7 +107,7 @@ export default function AdminSla() {
               <tbody className="divide-y divide-line tabular-nums">
                 {rec.data.items.slice(0, 15).map((r) => (
                   <tr key={`${r.category_code}-${r.ward}`}>
-                    <td className="py-2">{r.is_hotspot && <Flame className="mr-1 inline h-3.5 w-3.5 text-orange-700" aria-label="hotspot" />}{r.category_name}</td>
+                    <td className="py-2">{r.category_name}{r.is_hotspot && <Badge tone="serious" className="ml-2">Hotspot</Badge>}</td>
                     <td className="py-2">{r.ward}</td>
                     <td className="py-2 text-right font-semibold">{r.count}</td>
                     <td className="py-2 text-right">{r.previous_count}</td>
@@ -153,7 +152,7 @@ export default function AdminSla() {
                   <p className="text-xs text-ink-muted">{o.officer_code}</p>
                 </div>
                 <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100" aria-hidden>
-                  <div className="h-full rounded-full bg-[#2a78d6]" style={{ width: `${Math.min(100, o.utilisation * 100)}%` }} />
+                  <div className="h-full bg-brand-600" style={{ width: `${Math.min(100, o.utilisation * 100)}%` }} />
                 </div>
                 <span className="w-14 text-right text-xs tabular-nums">{o.open_cases}/{o.capacity}</span>
               </div>

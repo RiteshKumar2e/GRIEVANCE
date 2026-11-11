@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Link2, Star } from "lucide-react";
 import { useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { SensitiveBadge, SlaIndicator, StatusBadge, Timeline, UrgencyBadge } from "../../components/domain";
+import { ReadAloud, SensitiveBadge, SlaIndicator, StatusBadge, Timeline, UrgencyBadge } from "../../components/domain";
+import { IconStar } from "../../components/icons";
+import { useToast } from "../../components/Toast";
 import { Alert, Button, Card, ErrorState, Field, Modal, PageHeader, Spinner, Textarea } from "../../components/ui";
 import { api } from "../../lib/api";
 import { fmtDate } from "../../lib/format";
@@ -14,6 +15,7 @@ export default function GrievanceTrack() {
   const [params] = useSearchParams();
   const { t, lang } = useI18n();
   const qc = useQueryClient();
+  const toast = useToast();
   const q = useQuery({ queryKey: ["citizen", "grievance", id], queryFn: () => api<GrievanceDetail>(`/citizen/grievances/${id}`) });
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
@@ -27,12 +29,16 @@ export default function GrievanceTrack() {
   };
   const confirm = useMutation({
     mutationFn: () => api<GrievanceDetail>(`/citizen/grievances/${id}/confirm-resolution`, { body: { rating: rating || undefined, comment: comment || undefined } }),
-    onSuccess: refresh,
+    onSuccess: (g) => {
+      refresh(g);
+      toast.success("Thank you. Your grievance is now closed.");
+    },
   });
   const dispute = useMutation({
     mutationFn: () => api<GrievanceDetail>(`/citizen/grievances/${id}/dispute`, { body: { reason } }),
     onSuccess: (g) => {
       refresh(g);
+      toast.success("Your grievance has been reopened and the officer notified.");
       setDisputeOpen(false);
       setReason("");
     },
@@ -63,7 +69,7 @@ export default function GrievanceTrack() {
           {g.status === "RESOLVED" && (
             <Card title="Was your problem fixed?" subtitle="Confirm to close the grievance, or dispute it to reopen.">
               {g.resolution_summary && (
-                <p className="mb-4 rounded-md bg-green-50 p-3 text-sm text-green-900">
+                <p className="mb-4 border-l-[3px] border-status-good bg-[#EAF4EC] px-3 py-2.5 text-sm text-[#184F24]">
                   <span className="font-semibold">Action taken:</span> {g.resolution_summary}
                 </p>
               )}
@@ -71,7 +77,7 @@ export default function GrievanceTrack() {
               <div className="mb-3 flex gap-1" role="radiogroup" aria-label="Rating">
                 {[1, 2, 3, 4, 5].map((n) => (
                   <button key={n} role="radio" aria-checked={rating === n} aria-label={`${n} star`} onClick={() => setRating(n)} className="p-0.5">
-                    <Star className={n <= rating ? "h-6 w-6 fill-saffron-500 text-saffron-500" : "h-6 w-6 text-slate-300"} aria-hidden />
+                    <IconStar width={24} height={24} filled={n <= rating} className={n <= rating ? "text-brand-700" : "text-ink-muted/50"} />
                   </button>
                 ))}
               </div>
@@ -79,7 +85,7 @@ export default function GrievanceTrack() {
               {(confirm.error || dispute.error) && <div className="mt-3"><Alert tone="critical">{String((confirm.error || dispute.error)?.message)}</Alert></div>}
               <div className="mt-4 flex flex-wrap gap-2">
                 <Button onClick={() => confirm.mutate()} loading={confirm.isPending}>
-                  <CheckCircle2 className="h-4 w-4" aria-hidden /> <span lang={lang}>{t("confirmResolution")}</span>
+                  <span lang={lang}>{t("confirmResolution")}</span>
                 </Button>
                 <Button variant="secondary" onClick={() => setDisputeOpen(true)}>
                   <span lang={lang}>{t("dispute")}</span>
@@ -97,14 +103,13 @@ export default function GrievanceTrack() {
             </Alert>
           )}
           {g.is_sensitive && <Alert tone="warning">{t("sensitiveNote")}</Alert>}
-          <Card title="Your complaint">
+          <Card title="Your complaint" action={<ReadAloud lang={g.language} text={`${g.title}. Status: ${g.status.replace("_", " ").toLowerCase()}. ${g.description}`} label={t("listen")} />}>
             <p className="whitespace-pre-wrap text-sm leading-relaxed" lang={g.language}>
               {g.description}
             </p>
             {g.duplicate_group && (
-              <p className="mt-4 flex items-start gap-2 rounded-md bg-brand-50 p-3 text-sm text-brand-900">
-                <Link2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-                {g.duplicate_group_size && g.duplicate_group_size > 1
+              <p className="mt-4 border-l-[3px] border-brand-600 bg-brand-50 px-3 py-2.5 text-sm text-brand-900">
+                                {g.duplicate_group_size && g.duplicate_group_size > 1
                   ? `${g.duplicate_group_size - 1} other citizen report(s) about the same issue are linked to this one. Your grievance is still tracked individually.`
                   : "This grievance is linked to related reports. It is still tracked individually."}
               </p>

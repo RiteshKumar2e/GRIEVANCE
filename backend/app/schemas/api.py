@@ -74,6 +74,18 @@ class IntakeIn(BaseModel):
     input_mode: Literal["text", "voice"] = "text"
 
 
+class ChatMessage(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str = Field(min_length=1, max_length=3000)
+
+
+class ConverseIn(BaseModel):
+    messages: list[ChatMessage] = Field(min_length=1, max_length=20)
+    language: Lang | None = None
+    input_mode: Literal["text", "voice"] = "text"
+    finish: bool = False  # citizen asks for the draft now, without more questions
+
+
 class DraftOut(BaseModel):
     draft_token: str
     expires_at: datetime
@@ -184,3 +196,12 @@ class WebhookIn(BaseModel):
     url: str = Field(pattern=r"^https?://", max_length=500)
     events: list[str] = []
     is_active: bool = True
+
+
+class ConverseOut(BaseModel):
+    reply: str
+    ready: bool
+    language: str
+    missing: list[str]
+    trace_id: str | None = None
+    draft: DraftOut | None = None

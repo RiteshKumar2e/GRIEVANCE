@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bot, FileSearch, Gavel, Link2, ShieldCheck, Unlink, UserCheck } from "lucide-react";
 import { useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ConfidenceMeter, SensitiveBadge, SlaIndicator, SourceBadge, StatusBadge, Timeline, UrgencyBadge } from "../../components/domain";
+import { useToast } from "../../components/Toast";
+import { ConfidenceMeter, ReasoningList, SensitiveBadge, SlaIndicator, SourceBadge, StatusBadge, Timeline, UrgencyBadge } from "../../components/domain";
 import { Alert, Badge, Button, Card, ErrorState, Field, Input, Modal, PageHeader, Select, Spinner, Textarea } from "../../components/ui";
 import { api } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
@@ -24,7 +24,9 @@ export default function OfficerGrievance() {
   const [noteBody, setNoteBody] = useState("");
   const [showAudit, setShowAudit] = useState(false);
 
+  const toast = useToast();
   const done = (g: GrievanceDetail) => {
+    toast.success(`${g.public_id} updated: ${g.status.replace("_", " ").toLowerCase()}.`);
     qc.setQueryData(key, g);
     void qc.invalidateQueries({ queryKey: ["officer"] });
     setAction(null);
@@ -54,6 +56,7 @@ export default function OfficerGrievance() {
     mutationFn: () => api<GrievanceDetail>(`/officer/grievances/${id}/notes`, { body: { body: noteBody } }),
     onSuccess: (g) => {
       qc.setQueryData(key, g);
+      toast.success("Note added.");
       setNoteBody("");
     },
   });
@@ -145,7 +148,7 @@ export default function OfficerGrievance() {
           <>
             {g.status === "PENDING_REVIEW" && (
               <Button onClick={() => setAction("review")} disabled={sensitiveBlocked}>
-                <UserCheck className="h-4 w-4" aria-hidden /> Review & assign
+                Review and assign
               </Button>
             )}
             {["ASSIGNED", "REOPENED"].includes(g.status) && <Button onClick={() => setAction("progress")}>Start work</Button>}
@@ -160,7 +163,7 @@ export default function OfficerGrievance() {
 
       <div className="grid gap-5 xl:grid-cols-[1fr_380px]">
         <div className="space-y-5">
-          <Card title={<span className="flex items-center gap-2"><Bot className="h-4 w-4 text-brand-600" aria-hidden /> AI summary</span>} subtitle={g.ai_provider ? `Intake by ${g.ai_provider}` : undefined}>
+          <Card title="AI summary" subtitle={g.ai_provider ? `Intake by ${g.ai_provider}` : undefined}>
             <p className="text-sm text-ink">{g.ai_summary || "—"}</p>
             <details className="mt-3">
               <summary className="cursor-pointer text-sm font-medium text-brand-700">Original complaint ({g.language.toUpperCase()}, {g.input_mode})</summary>
@@ -169,7 +172,7 @@ export default function OfficerGrievance() {
           </Card>
 
           {pol && (
-            <Card title={<span className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-brand-600" aria-hidden /> Policy decision</span>} subtitle="Deterministic policy gate — LLM output is advisory only.">
+            <Card title="Policy decision" subtitle="Deterministic policy gate. LLM output is advisory only.">
               <div className="grid gap-4 sm:grid-cols-3">
                 <div>
                   <p className="text-xs text-ink-muted">Confidence vs threshold</p>
@@ -197,13 +200,28 @@ export default function OfficerGrievance() {
                   </p>
                 ))}
               </div>
+              {(pol.intake_reasoning?.length || pol.reasoning?.length) ? (
+                <details className="mt-4 border-t border-line pt-3" open>
+                  <summary className="cursor-pointer text-[13px] font-semibold text-ink">Why the AI decided this</summary>
+                  <div className="mt-3 grid gap-5 lg:grid-cols-2">
+                    <div>
+                      <p className="mb-2 text-[12px] font-medium uppercase tracking-[0.06em] text-ink-muted">Intake agent</p>
+                      <ReasoningList lines={pol.intake_reasoning ?? []} compact />
+                    </div>
+                    <div>
+                      <p className="mb-2 text-[12px] font-medium uppercase tracking-[0.06em] text-ink-muted">Policy gate</p>
+                      <ReasoningList lines={pol.reasoning ?? []} compact />
+                    </div>
+                  </div>
+                </details>
+              ) : null}
               <p className="mt-3 text-xs text-ink-muted">
                 AI may: {pol.allowed_ai_actions.map(titleCase).join(", ")}. AI may never: {pol.forbidden_ai_actions.map(titleCase).join(", ")}.
               </p>
             </Card>
           )}
 
-          <Card title={<span className="flex items-center gap-2"><FileSearch className="h-4 w-4 text-brand-600" aria-hidden /> Similar resolved grievances</span>} subtitle="Retrieved by multilingual semantic search. Supporting evidence only — not a decision.">
+          <Card title="Case memory: similar resolved grievances" subtitle="Retrieved by multilingual semantic search. Supporting evidence only, never a decision.">
             {!g.precedents?.length && <p className="text-sm text-ink-muted">No comparable resolved grievances found.</p>}
             <ul className="space-y-3">
               {g.precedents?.map((p) => (
@@ -220,7 +238,7 @@ export default function OfficerGrievance() {
             </ul>
           </Card>
 
-          <Card title={<span className="flex items-center gap-2"><Link2 className="h-4 w-4 text-brand-600" aria-hidden /> Linked reports</span>} subtitle="Duplicate grouping links reports; each keeps its own ID, status and notifications.">
+          <Card title="Linked reports" subtitle="Duplicate grouping links reports; each keeps its own ID, status and notifications.">
             {!g.duplicates?.length && <p className="text-sm text-ink-muted">No linked reports.</p>}
             <ul className="divide-y divide-line">
               {g.duplicates?.map((d) => (
@@ -235,7 +253,7 @@ export default function OfficerGrievance() {
                   <div className="flex items-center gap-2">
                     <StatusBadge status={d.status} />
                     <Button size="sm" variant="ghost" onClick={() => unlink.mutate(d.public_id)} loading={unlink.isPending && unlink.variables === d.public_id} title="Remove this link">
-                      <Unlink className="h-3.5 w-3.5" aria-hidden /> Unlink
+                      Unlink
                     </Button>
                   </div>
                 </li>
@@ -287,7 +305,7 @@ export default function OfficerGrievance() {
             </dl>
           </Card>
           <Card title="Status history"><Timeline items={g.status_history} /></Card>
-          <Card title={<span className="flex items-center gap-2"><Gavel className="h-4 w-4 text-brand-600" aria-hidden /> Audit trail</span>} action={<Button size="sm" variant="ghost" onClick={() => setShowAudit((s) => !s)}>{showAudit ? "Hide" : `Show ${g.audit?.length ?? 0}`}</Button>}>
+          <Card title="Audit trail" action={<Button size="sm" variant="ghost" onClick={() => setShowAudit((s) => !s)}>{showAudit ? "Hide" : `Show ${g.audit?.length ?? 0}`}</Button>}>
             {showAudit ? (
               <ul className="space-y-3 text-xs">
                 {g.audit?.map((a, i) => (

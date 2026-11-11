@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, Copy, ExternalLink, Share2 } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { IconCopy, IconExternal } from "../../components/icons";
 import { TraceSteps, type TraceStep } from "../../components/TraceSteps";
 import { Alert, Badge, Button, Card, EmptyState, ErrorState, PageHeader, Select, SkeletonRows } from "../../components/ui";
 import { api } from "../../lib/api";
@@ -88,7 +88,7 @@ function TracePanel({ traceId }: { traceId: string }) {
         t.share_token ? (
           <Button size="sm" variant="ghost" onClick={() => unshare.mutate()} loading={unshare.isPending}>Revoke link</Button>
         ) : (
-          <Button size="sm" variant="secondary" onClick={() => share.mutate()} loading={share.isPending}><Share2 className="h-3.5 w-3.5" aria-hidden /> Create public link</Button>
+          <Button size="sm" variant="secondary" onClick={() => share.mutate()} loading={share.isPending}>Create public link</Button>
         )
       }
     >
@@ -104,9 +104,9 @@ function TracePanel({ traceId }: { traceId: string }) {
             <div className="mt-1 flex items-center gap-2">
               <code className="min-w-0 flex-1 truncate rounded bg-white px-2 py-1 text-xs">{shareUrl}</code>
               <Button size="sm" variant="secondary" onClick={() => { void navigator.clipboard?.writeText(shareUrl); setCopied(true); setTimeout(() => setCopied(false), 1500); }}>
-                {copied ? <Check className="h-3.5 w-3.5" aria-hidden /> : <Copy className="h-3.5 w-3.5" aria-hidden />} {copied ? "Copied" : "Copy"}
+                <IconCopy width={14} height={14} /> {copied ? "Copied" : "Copy"}
               </Button>
-              <a href={shareUrl} target="_blank" rel="noreferrer" className="text-brand-700" aria-label="Open public trace"><ExternalLink className="h-4 w-4" /></a>
+              <a href={shareUrl} target="_blank" rel="noreferrer" className="text-brand-700" aria-label="Open public trace"><IconExternal width={16} height={16} /></a>
             </div>
             <p className="mt-1 text-xs">Shows decisions, models, confidence and references only — no complaint text or identities.</p>
           </Alert>

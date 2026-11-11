@@ -1,8 +1,8 @@
 """Public metadata (no auth): categories, departments, wards and system capability status."""
+import json
 import re
 
 from fastapi import APIRouter, Depends, Request, Response
-from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -56,23 +56,26 @@ def system_status(db: Session = Depends(get_db)):
     }
 
 
-class PageViewIn(BaseModel):
-    path: str = Field(min_length=1, max_length=200)
-
-
-_PATH_OK = re.compile(r"^/[A-Za-z0-9/_:\-]*$")
+_PATH_OK = re.compile(r"^/[A-Za-z0-9/_:\-]{0,199}$")
 
 
 @router.post("/pageview", status_code=204, response_class=Response)
-def pageview(body: PageViewIn, request: Request, db: Session = Depends(get_db)):
-    """Consent-gated, anonymous page-view counter. Stores only (day, route pattern, count)."""
+async def pageview(request: Request, db: Session = Depends(get_db)):
+    """Consent-gated, anonymous page-view counter. Stores only (day, route pattern, count).
+
+    Accepts a text/plain JSON body so browsers can send it with navigator.sendBeacon (no CORS preflight)."""
     limiter.check(request, "pageview", limit=240, window=60)
-    if not _PATH_OK.match(body.path):
+    raw = (await request.body())[:500]
+    try:
+        path = json.loads(raw or b"{}").get("path", "")
+    except (ValueError, AttributeError):
+        return Response(status_code=204)
+    if not isinstance(path, str) or not _PATH_OK.match(path):
         return Response(status_code=204)
     today = utcnow().date()
-    row = db.scalar(select(PageView).where(PageView.day == today, PageView.path == body.path))
+    row = db.scalar(select(PageView).where(PageView.day == today, PageView.path == path))
     if row is None:
-        db.add(PageView(day=today, path=body.path, count=1))
+        db.add(PageView(day=today, path=path, count=1))
     else:
         row.count += 1
     db.commit()

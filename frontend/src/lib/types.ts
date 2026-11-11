@@ -135,6 +135,8 @@ export interface GrievanceDetail extends GrievanceSummary {
     allowed_ai_actions: string[];
     forbidden_ai_actions: string[];
     requires_human_review: boolean;
+    reasoning?: string[];
+    intake_reasoning?: string[];
   } | null;
   precedents?: Precedent[];
   duplicates?: DuplicateRef[];
@@ -156,6 +158,7 @@ export interface Extraction {
   key_facts: string[];
   injection_suspected: boolean;
   sensitive_signals: string[];
+  reasoning?: string[];
   provider: string;
   model: string;
   method: string;

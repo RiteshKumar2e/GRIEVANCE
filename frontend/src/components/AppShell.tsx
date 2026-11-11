@@ -1,6 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
-import { Bell, LogOut, Menu, X } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
@@ -9,6 +8,7 @@ import { fmtDate } from "../lib/format";
 import { LANG_LABEL, useI18n } from "../lib/i18n";
 import type { Lang, Notification, SystemStatus } from "../lib/types";
 import { SyntheticBanner } from "./domain";
+import { IconBell, IconClose, IconMenu, IconSignOut } from "./icons";
 import { SiteFooter } from "./SiteChrome";
 
 export function Logo({ to = "/" }: { to?: string }) {
@@ -79,7 +79,7 @@ function NotificationBell() {
         className="relative flex h-9 w-9 items-center justify-center rounded-md text-ink-soft hover:bg-canvas hover:text-ink"
         aria-label={`Notifications${data?.unread ? `, ${data.unread} unread` : ""}`}
       >
-        <Bell className="h-5 w-5" aria-hidden />
+        <IconBell width={20} height={20} />
         {!!data?.unread && (
           <span className="absolute right-1 top-1 min-w-[16px] rounded-full bg-status-critical px-1 text-center text-[10px] font-bold leading-4 text-white">
             {data.unread > 99 ? "99+" : data.unread}
@@ -87,7 +87,7 @@ function NotificationBell() {
         )}
       </button>
       {open && (
-        <div className="absolute right-0 z-40 mt-2 w-[min(22rem,calc(100vw-2rem))] rounded-lg border border-line bg-white shadow-xl">
+        <div className="absolute right-0 z-40 mt-2 w-[min(22rem,calc(100vw-2rem))] rounded-lg border border-line bg-surface shadow-overlay">
           <div className="flex items-center justify-between border-b border-line px-4 py-2.5">
             <p className="text-sm font-semibold">Notifications</p>
             {!!data?.unread && (
@@ -172,7 +172,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         Skip to content
       </a>
       {status.data?.synthetic_data_in_use && <SyntheticBanner />}
-      <header className="sticky top-0 z-30 border-b border-line bg-white/95 backdrop-blur">
+      <header className="sticky top-0 z-30 border-b border-line bg-canvas/95 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-2 px-4">
           <div className="flex min-w-0 items-center gap-3">
             <button
@@ -182,7 +182,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               aria-expanded={menuOpen}
               aria-controls="mobile-nav"
             >
-              {menuOpen ? <X className="h-5 w-5" aria-hidden /> : <Menu className="h-5 w-5" aria-hidden />}
+              {menuOpen ? <IconClose width={20} height={20} /> : <IconMenu width={20} height={20} />}
             </button>
             <Logo to={user.role === "admin" ? "/admin" : user.role === "officer" ? "/officer" : "/citizen"} />
             <span className="hidden rounded bg-slate-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-ink-soft lg:inline">
@@ -197,7 +197,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <p className="truncate text-[11px] leading-tight text-ink-muted">{user.email}</p>
             </div>
             <button onClick={signOut} className="hidden h-9 w-9 items-center justify-center rounded-md text-ink-soft hover:bg-canvas hover:text-ink md:flex" aria-label="Sign out" title="Sign out">
-              <LogOut className="h-[18px] w-[18px]" aria-hidden />
+              <IconSignOut />
             </button>
           </div>
         </div>
@@ -213,7 +213,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </ul>
         </nav>
         {menuOpen && (
-          <nav id="mobile-nav" className="border-t border-line bg-white md:hidden" aria-label="Main">
+          <nav id="mobile-nav" className="border-t border-line bg-surface md:hidden" aria-label="Main">
             <div className="px-4 py-3">
               <p className="truncate text-sm font-medium">{user.full_name}</p>
               <p className="truncate text-xs text-ink-muted">{user.email} · {user.role}</p>
@@ -232,7 +232,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               ))}
               <li>
                 <button onClick={signOut} className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-medium text-ink-soft hover:bg-canvas">
-                  <LogOut className="h-4 w-4" aria-hidden /> Sign out
+                  <IconSignOut width={16} height={16} /> Sign out
                 </button>
               </li>
             </ul>

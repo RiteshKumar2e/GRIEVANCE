@@ -285,3 +285,25 @@ def audit_log(
         {"id": a.id, "grievance_id": a.grievance_public_id, "actor": a.actor, "actor_type": a.actor_type, "action": a.action,
          "provider": a.provider, "model": a.model, "confidence": a.confidence, "explanation": a.explanation,
          "policy_refs": a.policy_refs, "trace_id": a.trace_id, "created_at": _iso(a.created_at)} for a in rows]}
+
+
+@router.post("/webhooks/{hid}/test")
+def test_webhook(hid: int, user: User = Depends(require_admin), db: Session = Depends(get_db)):
+    """Send a signed sample event to one webhook immediately and report the result."""
+    from app.core.time import utcnow as _now
+
+    h = db.get(Webhook, hid)
+    if h is None:
+        raise HTTPException(404, "Webhook not found")
+    d = WebhookDelivery(webhook_id=h.id, event="webhook.test", payload={
+        "event": "webhook.test", "sent_at": _now().isoformat(),
+        "data": {"grievance_id": "GRV-TEST-000000", "status": "ASSIGNED", "category": "WATER_SUPPLY",
+                 "department": "WATER", "urgency": "medium", "note": "Test event from GRIEVANCE admin"}})
+    db.add(d)
+    db.commit()
+    deliver_pending()
+    db.refresh(d)
+    actor, actor_type = actor_of(user)
+    audit.record(db, action="webhook.test", actor=actor, actor_type=actor_type, explanation={"webhook": h.name, "status": d.status})
+    db.commit()
+    return {"status": d.status, "response_code": d.response_code, "error": d.last_error}

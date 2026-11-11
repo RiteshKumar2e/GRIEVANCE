@@ -1,4 +1,3 @@
-import { Check, X } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Logo } from "../../components/AppShell";
@@ -102,9 +101,10 @@ export default function Register() {
                 <PasswordInput id="pw" autoComplete="new-password" value={form.password} onChange={set("password")} onBlur={blur("password")} aria-invalid={!!show("password")} aria-describedby="pw-rules" required />
                 <ul id="pw-rules" className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs">
                   {rules.map((r) => (
-                    <li key={r.label} className={r.ok ? "flex items-center gap-1 text-green-700" : "flex items-center gap-1 text-ink-muted"}>
-                      {r.ok ? <Check className="h-3.5 w-3.5" aria-hidden /> : <X className="h-3.5 w-3.5" aria-hidden />}
+                    <li key={r.label} className={r.ok ? "flex items-center gap-1.5 text-status-good" : "flex items-center gap-1.5 text-ink-muted"}>
+                      <span className={r.ok ? "h-1.5 w-1.5 rounded-full bg-status-good" : "h-1.5 w-1.5 rounded-full border border-ink-muted"} aria-hidden />
                       {r.label}
+                      <span className="sr-only">{r.ok ? "(met)" : "(not yet met)"}</span>
                     </li>
                   ))}
                 </ul>

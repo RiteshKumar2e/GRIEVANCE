@@ -20,7 +20,7 @@ from app.db.session import get_db
 from app.llm import stt
 from app.models import Grievance, IntakeDraft, Notification, User
 from app.models.enums import ActorType, GrievanceStatus
-from app.schemas.api import ConfirmIn, DisputeIn, DraftOut, FeedbackIn, IntakeIn, TranscriptOut
+from app.schemas.api import ConfirmIn, ConverseIn, ConverseOut, DisputeIn, DraftOut, FeedbackIn, IntakeIn, TranscriptOut
 from app.services import audit, notifications
 from app.services.grievances import transition
 from app.services.webhooks import grievance_payload, queue_event
@@ -42,6 +42,30 @@ def analyze(body: IntakeIn, request: Request, user: User = Depends(require_citiz
     draft = orchestrator.analyze_intake(db, user, body.text.strip(), language_hint=body.language,
                                         location_hint=body.location, input_mode=body.input_mode)
     return _draft_out(draft)
+
+
+@router.post("/intake/converse", response_model=ConverseOut)
+def converse(body: ConverseIn, request: Request, user: User = Depends(require_citizen), db: Session = Depends(get_db)):
+    """Conversational intake: asks follow-up questions in the citizen's language, then generates the
+    structured draft. Nothing is submitted until the citizen confirms the draft."""
+    from app.agents import conversation
+    from app.services.tracing import Tracer
+
+    limiter.check(request, "converse", limit=120, window=600, key=str(user.id))
+    msgs = [m.model_dump() for m in body.messages]
+    turn = conversation.assess(db, msgs, body.language, finish=body.finish)
+    tracer = Tracer(db, "intake_conversation", metadata={"turn": sum(1 for m in msgs if m["role"] == "user")})
+    with tracer.step("intake_dialogue", {"turns": len(msgs), "language_hint": body.language}) as run:
+        run.provider, run.model, run.confidence = "dialogue-manager", "slot-filling-v1", None
+        run.output = {"ready": turn.ready, "missing": turn.missing, "language": turn.language, "reasoning": turn.reasoning}
+    tracer.finish()
+    db.commit()
+    if not turn.ready:
+        return ConverseOut(reply=turn.reply, ready=False, language=turn.language, missing=turn.missing, trace_id=tracer.trace_id)
+    text = "\n".join(m["content"].strip() for m in msgs if m["role"] == "user")[:5000]
+    draft = orchestrator.analyze_intake(db, user, text, language_hint=body.language or turn.language, input_mode=body.input_mode)
+    return ConverseOut(reply=turn.reply, ready=True, language=turn.language, missing=turn.missing, trace_id=draft.trace_id,
+                       draft=_draft_out(draft))
 
 
 @router.post("/intake/transcribe", response_model=TranscriptOut)
