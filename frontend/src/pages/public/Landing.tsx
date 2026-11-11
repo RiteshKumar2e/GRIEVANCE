@@ -127,6 +127,7 @@ function Header({ submitTo }: { submitTo: string }) {
     ["#how", c.how],
     ["#services", c.services],
     ["#about", c.about],
+    ["#faq", c.faq],
   ];
   const accountTo = user ? homeFor(user.role) : "/login";
   const accountLabel = user ? c.dashboard : c.signIn;
@@ -145,11 +146,7 @@ function Header({ submitTo }: { submitTo: string }) {
                 </a>
               </li>
             ))}
-            <li>
-              <Link to="/help" className={NAV_LINK}>
-                {c.faq}
-              </Link>
-            </li>
+
           </ul>
         </nav>
 
@@ -194,11 +191,6 @@ function Header({ submitTo }: { submitTo: string }) {
                 </a>
               </li>
             ))}
-            <li className="border-b border-stone">
-              <Link to="/help" className={clsx("flex min-h-12 items-center text-[16px] font-medium text-navy", FOCUS)}>
-                {c.faq}
-              </Link>
-            </li>
             <li className="border-b border-stone md:hidden">
               <Link to={accountTo} className={clsx("flex min-h-12 items-center text-[16px] font-semibold text-brand-700", FOCUS)}>
                 {accountLabel}
@@ -337,10 +329,10 @@ export default function Landing() {
                   ))}
                 </ul>
                 <p className="mt-5 border-t border-stone-dark/70 pt-4 text-[14px] leading-relaxed text-ink-soft">{c.before.sensitive}</p>
-                <Link to="/help" className={clsx(TEXT_LINK, "mt-4 inline-flex items-center gap-1.5 text-[15px]")}>
+                <a href="#faq" className={clsx(TEXT_LINK, "mt-4 inline-flex items-center gap-1.5 text-[15px]")}>
                   {c.before.help}
                   <IconArrow />
-                </Link>
+                </a>
               </div>
             </aside>
           </div>
@@ -447,6 +439,36 @@ export default function Landing() {
                 </div>
               ))}
             </dl>
+          </div>
+        </section>
+
+        {/* FAQ */}
+        <section id="faq" aria-labelledby="faq-title" className="scroll-mt-20 border-b border-stone bg-surface">
+          <div className="mx-auto grid max-w-6xl gap-10 px-4 py-16 sm:px-6 lg:grid-cols-12 lg:gap-8 lg:py-24">
+            <div className="lg:col-span-4">
+              <SectionHeading id="faq-title" eyebrow={c.faqSection.eyebrow} title={c.faqSection.title} deva={deva} />
+            </div>
+            <div className="border-t border-stone lg:col-span-8">
+              {c.faqSection.items.map(([q, a]) => (
+                <details key={q} className="group border-b border-stone">
+                  <summary
+                    className={clsx(
+                      "flex min-h-14 cursor-pointer list-none items-start justify-between gap-6 rounded-sm py-4 text-[17px] font-semibold text-navy transition-colors duration-150 hover:text-brand-700 motion-reduce:transition-none [&::-webkit-details-marker]:hidden",
+                      deva && "leading-snug",
+                      FOCUS,
+                    )}
+                  >
+                    {q}
+                    <span className="mt-0.5 shrink-0 text-brand-700 transition-transform duration-150 group-open:rotate-180 motion-reduce:transition-none" aria-hidden>
+                      <Glyph size={20}>
+                        <path d="M6 9l6 6 6-6" />
+                      </Glyph>
+                    </span>
+                  </summary>
+                  <p className={clsx("max-w-prose pb-5 pr-10 text-[16px] text-ink-soft", deva ? "leading-[1.75]" : "leading-relaxed")}>{a}</p>
+                </details>
+              ))}
+            </div>
           </div>
         </section>
 
