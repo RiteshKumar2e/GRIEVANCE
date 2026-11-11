@@ -30,7 +30,7 @@ OPEN = [s.value for s in OPEN_STATUSES]
 def estimate_label(db: Session) -> str:
     sources = {s for (s,) in db.execute(select(Grievance.data_source).where(Grievance.is_historical.is_(True)).distinct())}
     if not sources or sources == {DataSource.SYNTHETIC.value}:
-        return "Demo estimate based on SYNTHETIC history — not a measure of real-world accuracy."
+        return "Demo estimate based on SYNTHETIC history, not a measure of real-world accuracy."
     if DataSource.SYNTHETIC.value in sources:
         return "Estimate based on mixed OFFICIAL and SYNTHETIC history."
     return "Estimate based on OFFICIAL historical data."

@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 
 const APP = (import.meta.env.VITE_APP_NAME as string | undefined) || "GRIEVANCE";
-const DEFAULT_DESC = "GRIEVANCE — report civic problems in Hindi, Marathi or English and track them until they are fixed. Agentic, audited grievance redressal.";
+const DEFAULT_DESC = "Report civic problems in Hindi, Marathi or English and track them until they are fixed. An agentic, audited grievance redressal platform.";
 
 function setMeta(selector: string, attr: "name" | "property", key: string, value: string) {
   let el = document.head.querySelector<HTMLMetaElement>(selector);
@@ -16,7 +16,7 @@ function setMeta(selector: string, attr: "name" | "property", key: string, value
 /** Sets the document title and description (plus Open Graph equivalents) for a page. */
 export function usePageMeta(title: string, description: string = DEFAULT_DESC, opts: { noindex?: boolean } = {}) {
   useEffect(() => {
-    const full = title ? `${title} · ${APP}` : `${APP} — Agentic grievance redressal`;
+    const full = title ? `${title} · ${APP}` : `${APP}: agentic grievance redressal`;
     document.title = full;
     setMeta('meta[name="description"]', "name", "description", description);
     setMeta('meta[property="og:title"]', "property", "og:title", full);

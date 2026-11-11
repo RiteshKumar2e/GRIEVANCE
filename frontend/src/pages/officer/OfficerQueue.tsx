@@ -13,7 +13,7 @@ type Scope = "mine" | "department" | "review";
 
 const COPY: Record<Scope, { title: string; subtitle: string }> = {
   mine: { title: "My queue", subtitle: "Grievances assigned to you, ordered by escalation, urgency and SLA deadline." },
-  review: { title: "Human review queue", subtitle: "Sensitive, low-confidence or flagged grievances. The AI cannot assign or close these — your decision is required." },
+  review: { title: "Human review queue", subtitle: "Sensitive, low-confidence or flagged grievances. The AI cannot assign or close these. Your decision is required." },
   department: { title: "Department grievances", subtitle: "Every active grievance you are authorised to see." },
 };
 

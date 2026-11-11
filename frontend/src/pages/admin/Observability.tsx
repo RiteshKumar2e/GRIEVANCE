@@ -15,15 +15,25 @@ export default function Observability() {
   const nav = useNavigate();
   const [name, setName] = useState("");
   const list = useQuery({ queryKey: ["obs", "list", name], queryFn: () => api<TraceList>(`/observability/traces?limit=100${name ? `&name=${name}` : ""}`), refetchInterval: 30_000 });
+  const lf = useQuery({ queryKey: ["obs", "langfuse"], queryFn: () => api<{ enabled: boolean; ok: boolean; detail: string; host?: string }>("/observability/langfuse"), staleTime: 60_000 });
   const errors = useQuery({ queryKey: ["obs", "errors"], queryFn: () => api<{ trace_id: string; agent: string; error: string; started_at: string }[]>("/observability/errors?limit=10") });
 
   return (
     <div>
       <PageHeader
         title="Observability"
-        subtitle="Every agent execution is traced: provider and model, retrieval references, confidence, policy decisions, backend actions, human reviews, errors and timing. Inputs are PII-redacted and no model reasoning is stored."
-        actions={list.data && <Badge tone={list.data.langfuse_enabled ? "good" : "outline"}>Langfuse export {list.data.langfuse_enabled ? "on" : "off (internal tracing only)"}</Badge>}
+        subtitle="Every agent execution is traced: provider and model, retrieval references, confidence, policy decisions, backend actions, human reviews, errors and timing. Each step records a structured decision trail. Inputs are PII-redacted and raw model chain-of-thought is never stored."
+        actions={lf.data && <Badge tone={lf.data.ok ? "good" : lf.data.enabled ? "critical" : "outline"} title={lf.data.detail}>{lf.data.ok ? "Langfuse connected" : lf.data.enabled ? "Langfuse keys rejected" : "Langfuse not configured"}</Badge>}
       />
+      {lf.data && !lf.data.ok && (
+        <div className="mb-5">
+          <Alert tone={lf.data.enabled ? "critical" : "info"} title={lf.data.enabled ? "Langfuse rejected the configured keys" : "Live Langfuse tracing is not configured"}>
+            {lf.data.enabled
+              ? "Check LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY and LANGFUSE_HOST in backend/.env, then restart the backend."
+              : "Internal traces below are complete. To publish public Langfuse trace links, add LANGFUSE_PUBLIC_KEY and LANGFUSE_SECRET_KEY from a Langfuse project to backend/.env and restart the backend. Every new trace is then exported with a real link."}
+          </Alert>
+        </div>
+      )}
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
         <Card title="Recent traces" action={
           <Select aria-label="Workflow" className="h-8 w-48" value={name} onChange={(e) => setName(e.target.value)}>
@@ -47,7 +57,7 @@ export default function Observability() {
                     {t.errors > 0 && <Badge tone="critical">{t.errors} error</Badge>}
                     {t.shared && <Badge tone="outline">shared</Badge>}
                   </div>
-                  <p className="mt-0.5 text-xs text-ink-muted">{fmtDate(t.started_at)} · {t.steps} steps · {t.duration_ms ?? "—"} ms · {t.providers.join(", ")}</p>
+                  <p className="mt-0.5 text-xs text-ink-muted">{fmtDate(t.started_at)} · {t.steps} steps · {t.duration_ms ?? "n/a"} ms · {t.providers.join(", ")}</p>
                 </button>
               </li>
             ))}
@@ -93,9 +103,9 @@ function TracePanel({ traceId }: { traceId: string }) {
       }
     >
       <dl className="mb-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
-        <div><dt className="text-xs text-ink-muted">Grievance</dt><dd>{t.grievance_id ? <Link className="font-mono text-brand-700 hover:underline" to={`/officer/grievances/${t.grievance_id}`}>{t.grievance_id}</Link> : "—"}</dd></div>
+        <div><dt className="text-xs text-ink-muted">Grievance</dt><dd>{t.grievance_id ? <Link className="font-mono text-brand-700 hover:underline" to={`/officer/grievances/${t.grievance_id}`}>{t.grievance_id}</Link> : "n/a"}</dd></div>
         <div><dt className="text-xs text-ink-muted">Started</dt><dd>{fmtDate(t.started_at)}</dd></div>
-        <div><dt className="text-xs text-ink-muted">Duration</dt><dd className="tabular-nums">{t.duration_ms ?? "—"} ms</dd></div>
+        <div><dt className="text-xs text-ink-muted">Duration</dt><dd className="tabular-nums">{t.duration_ms ?? "n/a"} ms</dd></div>
         <div><dt className="text-xs text-ink-muted">Steps</dt><dd className="tabular-nums">{t.steps.length}</dd></div>
       </dl>
       {shareUrl && (
@@ -108,7 +118,7 @@ function TracePanel({ traceId }: { traceId: string }) {
               </Button>
               <a href={shareUrl} target="_blank" rel="noreferrer" className="text-brand-700" aria-label="Open public trace"><IconExternal width={16} height={16} /></a>
             </div>
-            <p className="mt-1 text-xs">Shows decisions, models, confidence and references only — no complaint text or identities.</p>
+            <p className="mt-1 text-xs">Shows decisions, models, confidence and references only. Complaint text and identities are never included.</p>
           </Alert>
         </div>
       )}

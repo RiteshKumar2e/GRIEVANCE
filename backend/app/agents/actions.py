@@ -102,7 +102,7 @@ def assign(
     audit.record_ai(db, action="assignment.officer", grievance=g,
                     explanation={"department": decision.department_code, "officer": officer.code, **why}, **meta_common)
     notifications.notify_officer(db, g, "assigned", f"New grievance assigned: {g.public_id}",
-                                 f"{g.title} — SLA due {g.sla_due_at:%d %b %Y %H:%M} UTC.")
+                                 f"{g.title}. SLA due {g.sla_due_at:%d %b %Y %H:%M} UTC.")
     queue_event(db, "grievance.assigned", grievance_payload(g))
     actions += ["assign_department", "assign_officer", "notify_officer"]
     return {"actions": actions, "status": g.status, "officer": officer.code}

@@ -44,7 +44,7 @@ export function PrivacyPolicy() {
           <li>Account details you provide: name, e-mail, optional mobile number and preferred language.</li>
           <li>Grievance details: your description (typed or transcribed), location or ward, and the status history.</li>
           <li>Voice recordings are transcribed on the server and deleted immediately; audio is never stored.</li>
-          <li>With your consent only: anonymous page-visit counts (the page pattern and date — no IDs, IP address or device data).</li>
+          <li>With your consent only: anonymous page-visit counts (the page pattern and date, with no IDs, IP address or device data).</li>
         </ul>
       </section>
       <section>

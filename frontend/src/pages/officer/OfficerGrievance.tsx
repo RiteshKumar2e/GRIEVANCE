@@ -164,7 +164,7 @@ export default function OfficerGrievance() {
       <div className="grid gap-5 xl:grid-cols-[1fr_380px]">
         <div className="space-y-5">
           <Card title="AI summary" subtitle={g.ai_provider ? `Intake by ${g.ai_provider}` : undefined}>
-            <p className="text-sm text-ink">{g.ai_summary || "—"}</p>
+            <p className="text-sm text-ink">{g.ai_summary || "n/a"}</p>
             <details className="mt-3">
               <summary className="cursor-pointer text-sm font-medium text-brand-700">Original complaint ({g.language.toUpperCase()}, {g.input_mode})</summary>
               <p className="mt-2 whitespace-pre-wrap rounded-md bg-canvas p-3 text-sm" lang={g.language}>{g.description}</p>
@@ -261,7 +261,7 @@ export default function OfficerGrievance() {
             </ul>
           </Card>
 
-          <Card title="Officer notes" subtitle="Internal — never shown to the citizen.">
+          <Card title="Officer notes" subtitle="Internal. Never shown to the citizen.">
             <ul className="mb-4 space-y-3">
               {g.notes?.map((n) => (
                 <li key={n.id} className="rounded-md bg-canvas p-3 text-sm">
@@ -295,12 +295,12 @@ export default function OfficerGrievance() {
           <Card title="Routing">
             <dl className="space-y-2.5 text-sm">
               <div><dt className="text-xs text-ink-muted">Category</dt><dd className="font-medium">{g.category?.name_en}</dd></div>
-              <div><dt className="text-xs text-ink-muted">Department</dt><dd className="font-medium">{g.department?.name ?? "—"}</dd></div>
+              <div><dt className="text-xs text-ink-muted">Department</dt><dd className="font-medium">{g.department?.name ?? "n/a"}</dd></div>
               <div><dt className="text-xs text-ink-muted">Assigned officer</dt><dd className="font-medium">{g.assigned_officer ? `${g.assigned_officer.name} (${g.assigned_officer.code})` : "Unassigned"}</dd></div>
-              <div><dt className="text-xs text-ink-muted">Location</dt><dd className="font-medium">{g.location_text || "—"}{g.ward ? ` · ${g.ward}` : ""}</dd></div>
+              <div><dt className="text-xs text-ink-muted">Location</dt><dd className="font-medium">{g.location_text || "n/a"}{g.ward ? ` · ${g.ward}` : ""}</dd></div>
               <div>
                 <dt className="text-xs text-ink-muted">Complainant</dt>
-                <dd className="font-medium">{g.citizen ? (g.citizen.protected ? <span className="text-red-800">Identity protected</span> : `${g.citizen.name}${g.citizen.phone ? ` · ${g.citizen.phone}` : ""}`) : "—"}</dd>
+                <dd className="font-medium">{g.citizen ? (g.citizen.protected ? <span className="text-red-800">Identity protected</span> : `${g.citizen.name}${g.citizen.phone ? ` · ${g.citizen.phone}` : ""}`) : "n/a"}</dd>
               </div>
             </dl>
           </Card>

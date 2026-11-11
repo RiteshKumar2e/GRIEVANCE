@@ -235,16 +235,16 @@ def run_intake(
     reasoning = [
         f"Language detected: {language}" + (" (hint supplied)" if language_hint in {"hi", "mr", "en"} else " (script + function-word markers)"),
         f"Rule classifier: {rule_code} at {rule_conf:.2f}"
-        + (f" — matched keywords: {', '.join(matched_keywords(text, rule_cat))}" if matched_keywords(text, rule_cat) else " — no keyword evidence, fell back to GENERAL"),
+        + (f"; matched keywords: {', '.join(matched_keywords(text, rule_cat))}" if matched_keywords(text, rule_cat) else "; no keyword evidence, fell back to GENERAL"),
         "Alternatives considered: " + (", ".join(f"{a['category_code']} ({a['score']:.2f})" for a in alts) or "none"),
-        f"Location: {loc_text} (ward {ward})" if loc_text else "Location: not found in text — citizen must supply it",
+        f"Location: {loc_text} (ward {ward})" if loc_text else "Location: not found in text, the citizen must supply it",
     ]
     if sens:
         reasoning.append(f"Sensitive-category indicators present: {', '.join(sens)}")
     if injection:
-        reasoning.append("Instruction-like text detected in the complaint (possible prompt injection) — treated as data only")
+        reasoning.append("Instruction-like text detected in the complaint (possible prompt injection), treated as data only")
 
-    category_list = "\n".join(f"- {c.code}: {c.name_en} — {c.description}" for c in categories)
+    category_list = "\n".join(f"- {c.code}: {c.name_en}: {c.description}" for c in categories)
     if use_llm:
         llm = complete_json(
             SYSTEM_PROMPT,
@@ -266,7 +266,7 @@ def run_intake(
             reasoning.append(f"LLM rationale: {d['rationale']}")
         if code != rule_code and rule_conf >= 0.7:
             conf = min(conf, 0.55)
-            reasoning.append(f"Disagreement with confident rule classifier ({rule_code}) — confidence capped at 0.55 so a human reviews it")
+            reasoning.append(f"Disagreement with confident rule classifier ({rule_code}); confidence capped at 0.55 so a human reviews it")
         else:
             reasoning.append("Rule classifier cross-check: " + ("agrees" if code == rule_code else "weak disagreement, LLM kept"))
         cat = by_code[code]
@@ -314,7 +314,7 @@ def run_intake(
         injection_suspected=injection,
         sensitive_signals=sens,
         reasoning=reasoning + [
-            "LLM unavailable (" + ", ".join(f"{a['provider']}: {a['status']}" for a in llm.attempts) + ") — deterministic rules used",
+            "LLM unavailable (" + ", ".join(f"{a['provider']}: {a['status']}" for a in llm.attempts) + "), so deterministic rules were used",
             f"Urgency: {detect_urgency(text, default_urgency)} (category default {default_urgency}, adjusted by urgency words)",
         ],
         provider=FALLBACK_PROVIDER,

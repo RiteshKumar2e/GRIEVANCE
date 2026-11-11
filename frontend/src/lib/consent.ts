@@ -2,7 +2,7 @@
  *
  * Essential storage only (session token in sessionStorage, language in localStorage) needs no consent.
  * Page-view analytics are OFF until the visitor accepts. When on, the app sends only a normalised route
- * pattern (IDs stripped) to our own backend — no cookies, no third parties, no user or device identifiers. */
+ * pattern (IDs stripped) to our own backend: no cookies, no third parties, no user or device identifiers. */
 import { apiBase } from "./api";
 
 const KEY = "grievance.consent.v1";

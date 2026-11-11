@@ -1,13 +1,13 @@
 import type { Status, Urgency } from "./types";
 
 export function fmtDate(iso: string | null | undefined, withTime = true): string {
-  if (!iso) return "—";
+  if (!iso) return "n/a";
   const d = new Date(iso);
   return d.toLocaleString("en-IN", withTime ? { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" } : { day: "2-digit", month: "short", year: "numeric" });
 }
 
 export function relTime(iso: string | null | undefined): string {
-  if (!iso) return "—";
+  if (!iso) return "n/a";
   const diff = (Date.now() - new Date(iso).getTime()) / 1000;
   const abs = Math.abs(diff);
   const units: [number, string][] = [[86400, "day"], [3600, "hour"], [60, "minute"]];
@@ -21,13 +21,13 @@ export function relTime(iso: string | null | undefined): string {
 }
 
 export function hoursLabel(h: number | null | undefined): string {
-  if (h === null || h === undefined) return "—";
+  if (h === null || h === undefined) return "n/a";
   const abs = Math.abs(h);
   const txt = abs >= 48 ? `${Math.round(abs / 24)} d` : abs >= 1 ? `${Math.round(abs)} h` : `${Math.round(abs * 60)} min`;
   return h < 0 ? `${txt} overdue` : `${txt} left`;
 }
 
-export const pct = (v: number | null | undefined, digits = 0) => (v === null || v === undefined ? "—" : `${(v * 100).toFixed(digits)}%`);
+export const pct = (v: number | null | undefined, digits = 0) => (v === null || v === undefined ? "n/a" : `${(v * 100).toFixed(digits)}%`);
 
 export const STATUS_LABEL: Record<Status, string> = {
   SUBMITTED: "Submitted",

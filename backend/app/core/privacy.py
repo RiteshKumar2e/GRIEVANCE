@@ -35,7 +35,7 @@ def redact(obj: Any) -> Any:
 
 def mask_name(name: str | None) -> str:
     if not name:
-        return "—"
+        return "n/a"
     parts = name.split()
     return " ".join(p[0] + "•" * max(1, len(p) - 1) for p in parts)
 

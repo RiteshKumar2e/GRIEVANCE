@@ -49,9 +49,9 @@ export default function AdminAudit() {
                       <td className="whitespace-nowrap px-4 py-2 text-xs">{fmtDate(a.created_at)}</td>
                       <td className="px-3 py-2"><Badge tone={a.actor_type === "AI_SYSTEM" ? "brand" : "neutral"}>{a.actor_type}</Badge></td>
                       <td className="px-3 py-2 font-mono text-xs">{a.action}</td>
-                      <td className="px-3 py-2">{a.grievance_id ? <Link onClick={(e) => e.stopPropagation()} className="font-mono text-xs text-brand-700 hover:underline" to={`/officer/grievances/${a.grievance_id}`}>{a.grievance_id}</Link> : "—"}</td>
-                      <td className="px-3 py-2 text-xs text-ink-soft">{a.provider ? `${a.provider} · ${a.model}` : "—"}</td>
-                      <td className="px-3 py-2 text-right tabular-nums">{a.confidence !== null ? pct(a.confidence) : "—"}</td>
+                      <td className="px-3 py-2">{a.grievance_id ? <Link onClick={(e) => e.stopPropagation()} className="font-mono text-xs text-brand-700 hover:underline" to={`/officer/grievances/${a.grievance_id}`}>{a.grievance_id}</Link> : "n/a"}</td>
+                      <td className="px-3 py-2 text-xs text-ink-soft">{a.provider ? `${a.provider} · ${a.model}` : "n/a"}</td>
+                      <td className="px-3 py-2 text-right tabular-nums">{a.confidence !== null ? pct(a.confidence) : "n/a"}</td>
                       <td className="px-3 py-2 font-mono text-[11px] text-ink-muted">{a.policy_refs.join(" ")}</td>
                     </tr>
                     {open === a.id && (

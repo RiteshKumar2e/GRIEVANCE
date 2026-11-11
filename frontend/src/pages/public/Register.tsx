@@ -58,7 +58,7 @@ export default function Register() {
         phone: form.phone.trim() || undefined,
         password: form.password,
         preferred_language: form.preferred_language,
-        website: form.website, // honeypot — must stay empty
+        website: form.website, // honeypot, must stay empty
       } as Parameters<typeof register>[0]);
       setLang(form.preferred_language);
       toast.success("Account created. You can now file your first grievance.");

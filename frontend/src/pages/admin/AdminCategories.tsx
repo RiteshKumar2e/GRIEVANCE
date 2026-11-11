@@ -76,7 +76,7 @@ export default function AdminCategories() {
         >
           <div className="grid grid-cols-2 gap-4">
             <Field label="SLA (hours)" htmlFor="sla"><Input id="sla" type="number" min={1} value={edit.sla_hours} onChange={(e) => setEdit({ ...edit, sla_hours: Number(e.target.value) })} /></Field>
-            <Field label="Confidence threshold" htmlFor="thr" hint="0–1; below this the case goes to human review">
+            <Field label="Confidence threshold" htmlFor="thr" hint="Between 0 and 1. Cases below this go to human review.">
               <Input id="thr" type="number" step={0.05} min={0} max={1} value={edit.confidence_threshold} onChange={(e) => setEdit({ ...edit, confidence_threshold: Number(e.target.value) })} />
             </Field>
             <div className="col-span-2">

@@ -54,7 +54,7 @@ export default function GrievanceTrack() {
       {params.get("new") && (
         <div className="mb-5">
           <Alert tone="good" title={t("submitted")}>
-            Your grievance ID is <strong className="font-mono">{g.public_id}</strong>. Keep it for reference — you will be notified at every step.
+            Your grievance ID is <strong className="font-mono">{g.public_id}</strong>. Keep it for reference. You will be notified at every step.
           </Alert>
         </div>
       )}
@@ -128,7 +128,7 @@ export default function GrievanceTrack() {
               </div>
               <div>
                 <dt className="text-ink-muted">{t("department")}</dt>
-                <dd className="font-medium">{g.department?.name ?? "—"}</dd>
+                <dd className="font-medium">{g.department?.name ?? "n/a"}</dd>
               </div>
               <div>
                 <dt className="text-ink-muted">{t("urgency")}</dt>
@@ -136,7 +136,7 @@ export default function GrievanceTrack() {
               </div>
               <div>
                 <dt className="text-ink-muted">Location</dt>
-                <dd className="font-medium">{g.location_text || g.ward || "—"}</dd>
+                <dd className="font-medium">{g.location_text || g.ward || "n/a"}</dd>
               </div>
               <div>
                 <dt className="text-ink-muted">Filed</dt>

@@ -32,7 +32,7 @@ export default function CitizenHome() {
       {q.isLoading && <SkeletonRows />}
       {q.isError && <ErrorState error={q.error} onRetry={() => q.refetch()} />}
       {q.data && q.data.length === 0 && (
-        <EmptyState title={t("emptyGrievances")} body="Describe a civic problem in English, Hindi or Marathi — by typing or speaking." action={<Link to="/citizen/new"><Button>{t("fileComplaint")}</Button></Link>} />
+        <EmptyState title={t("emptyGrievances")} body="Describe a civic problem in English, Hindi or Marathi, by typing or speaking." action={<Link to="/citizen/new"><Button>{t("fileComplaint")}</Button></Link>} />
       )}
       {[{ label: "Active", rows: open }, { label: "Closed", rows: closed }].map(
         (sec) =>
@@ -53,7 +53,7 @@ export default function CitizenHome() {
                         </div>
                         <p className="mt-1 truncate font-medium text-ink">{g.title}</p>
                         <p className="mt-0.5 text-xs text-ink-muted" lang={lang}>
-                          {categoryName(g.category, lang)} · {g.department?.name ?? "—"} · filed {relTime(g.created_at)}
+                          {categoryName(g.category, lang)} · {g.department?.name ?? "n/a"} · filed {relTime(g.created_at)}
                         </p>
                       </div>
                       <div className="hidden sm:block">{g.status !== "CLOSED" && g.status !== "RESOLVED" && <SlaIndicator sla={g.sla} compact />}</div>

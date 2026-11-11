@@ -105,7 +105,7 @@ def link(db: Session, g: Grievance, matches: list[DuplicateMatch], linked_by: st
         group = DuplicateGroup(
             public_id=f"DUP-{secrets.token_hex(3).upper()}",
             category_id=g.category_id, ward=g.ward or best.grievance.ward,
-            label=f"{g.category.name_en if g.category else 'Related grievances'} — {g.ward or best.grievance.ward or 'nearby'}",
+            label=f"{g.category.name_en if g.category else 'Related grievances'}, {g.ward or best.grievance.ward or 'nearby'}",
             created_by=linked_by,
         )
         db.add(group)

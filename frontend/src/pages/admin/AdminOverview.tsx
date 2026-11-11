@@ -54,7 +54,7 @@ export default function AdminOverview() {
             <StatTile label="Sensitive open" value={o.sensitive_open} />
             <StatTile label="Overdue open" value={o.overdue_open} tone={o.overdue_open ? "critical" : undefined} />
             <StatTile label="SLA compliance" value={pct(o.sla_compliance)} hint="of resolved cases" />
-            <StatTile label="Median resolution" value={o.median_resolution_hours != null ? `${o.median_resolution_hours} h` : "—"} />
+            <StatTile label="Median resolution" value={o.median_resolution_hours != null ? `${o.median_resolution_hours} h` : "n/a"} />
           </div>
           <p className="mt-2 text-xs text-ink-muted">
             Data sources: {Object.entries(o.by_data_source).map(([k, v]) => `${k} ${v}`).join(" · ")}. {o.estimate_label}
@@ -97,7 +97,7 @@ export default function AdminOverview() {
                       <td className={`py-2 text-right ${d.overdue ? "font-semibold text-red-700" : ""}`}>{d.overdue}</td>
                       <td className="py-2 text-right">{d.resolved}</td>
                       <td className="py-2 text-right">{pct(d.sla_compliance)}</td>
-                      <td className="py-2 text-right">{d.median_resolution_hours ?? "—"}</td>
+                      <td className="py-2 text-right">{d.median_resolution_hours ?? "n/a"}</td>
                     </tr>
                   ))}
                 </tbody>

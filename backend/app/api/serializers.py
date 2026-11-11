@@ -113,7 +113,7 @@ def grievance_detail(db: Session, g: Grievance, viewer: User) -> dict[str, Any]:
             ],
             "duplicates": duplicate_view(db, g, viewer),
             "notes": [
-                {"id": n.id, "body": n.body, "author": n.author.full_name if n.author else "—", "created_at": _iso(n.created_at)}
+                {"id": n.id, "body": n.body, "author": n.author.full_name if n.author else "n/a", "created_at": _iso(n.created_at)}
                 for n in db.scalars(select(OfficerNote).where(OfficerNote.grievance_id == g.id).order_by(OfficerNote.created_at))
             ],
             "audit": [

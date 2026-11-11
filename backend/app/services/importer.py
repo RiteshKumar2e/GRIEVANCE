@@ -191,7 +191,7 @@ def _categories(db: Session, rows, report: ImportReport, source: str, replace: b
         dept = depts.get(r["department_code"])
         if dept is None:
             report.skipped += 1
-            report.errors.append({"row": i, "error": f"unknown department '{r['department_code']}' — import departments first"})
+            report.errors.append({"row": i, "error": f"unknown department '{r['department_code']}'; import departments first"})
             continue
         c = db.scalar(select(GrievanceCategory).where(GrievanceCategory.code == r["code"]))
         if _source_conflict(c, source, replace, report, i, r["code"]):

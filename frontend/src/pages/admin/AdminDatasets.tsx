@@ -42,7 +42,7 @@ export default function AdminDatasets() {
 
   return (
     <div>
-      <PageHeader title="Datasets" subtitle="Official HackFusion datasets are not yet available — the platform runs on clearly labelled SYNTHETIC data. Import the official files here; column names are mapped automatically using the schema below." />
+      <PageHeader title="Datasets" subtitle="Official HackFusion datasets are not yet available. The platform runs on clearly labelled SYNTHETIC data. Import the official files here; column names are mapped automatically using the schema below." />
       {q.isError && <ErrorState error={q.error} />}
       {q.isLoading && <SkeletonRows />}
       {q.data && (
@@ -80,7 +80,7 @@ export default function AdminDatasets() {
             </Field>
             <label className="flex items-start gap-2 text-sm">
               <input type="checkbox" className="mt-0.5 h-4 w-4 accent-brand-800" checked={replace} onChange={(e) => setReplace(e.target.checked)} />
-              <span>Allow overwriting records from another source (e.g. replace SYNTHETIC categories with OFFICIAL ones). Off by default — conflicting rows are skipped and reported.</span>
+              <span>Allow overwriting records from another source (e.g. replace SYNTHETIC categories with OFFICIAL ones). Off by default: conflicting rows are skipped and reported.</span>
             </label>
             <div className="flex gap-2">
               <Button variant="secondary" disabled={!file} loading={upload.isPending && upload.variables === true} onClick={() => upload.mutate(true)}>Validate (dry run)</Button>
@@ -88,7 +88,7 @@ export default function AdminDatasets() {
             </div>
             {upload.error && <Alert tone="critical">{upload.error.message}</Alert>}
             {r && (
-              <Alert tone={r.errors.length ? "warning" : "good"} title={r.dry_run ? "Dry run — nothing written" : "Import complete"}>
+              <Alert tone={r.errors.length ? "warning" : "good"} title={r.dry_run ? "Dry run, nothing written" : "Import complete"}>
                 <p>{r.total} rows · {r.created} created · {r.updated} updated · {r.skipped} skipped</p>
                 {!!r.unmapped_columns.length && <p className="mt-1">Ignored columns: {r.unmapped_columns.join(", ")}</p>}
                 {!!r.errors.length && (

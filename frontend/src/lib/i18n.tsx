@@ -181,6 +181,6 @@ export function useI18n(): I18n {
 export const LANG_LABEL: Record<Lang, string> = { en: "English", hi: "हिंदी", mr: "मराठी" };
 
 export function categoryName(c: { name_en: string; name_hi?: string | null; name_mr?: string | null } | null | undefined, lang: Lang) {
-  if (!c) return "—";
+  if (!c) return "n/a";
   return (lang === "hi" ? c.name_hi : lang === "mr" ? c.name_mr : null) || c.name_en;
 }

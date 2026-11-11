@@ -77,8 +77,8 @@ export default function AdminSla() {
                     <td className="py-2">{w.state === "breached" ? <Badge tone="critical">Breached</Badge> : <Badge tone="warning">At risk</Badge>}</td>
                     <td className="py-2 tabular-nums">{fmtDate(w.due_at)}</td>
                     <td className="py-2 text-right tabular-nums">{pct(w.breach_probability)}</td>
-                    <td className="py-2 text-right tabular-nums">{w.predicted_resolution_hours ?? "—"}</td>
-                    <td className="py-2 text-right tabular-nums">{w.escalation_level ? `L${w.escalation_level}` : "—"}</td>
+                    <td className="py-2 text-right tabular-nums">{w.predicted_resolution_hours ?? "n/a"}</td>
+                    <td className="py-2 text-right tabular-nums">{w.escalation_level ? `L${w.escalation_level}` : "n/a"}</td>
                   </tr>
                 ))}
               </tbody>
