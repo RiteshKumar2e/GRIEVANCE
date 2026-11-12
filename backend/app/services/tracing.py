@@ -238,6 +238,7 @@ def _trace_context(trace: AgentTrace) -> dict[str, Any]:
         "langfuse.user.id": meta.get("user_id"),  # internal account id only, never a name or contact detail
         "langfuse.environment": env,
         "langfuse.release": RELEASE,
+        "langfuse.version": RELEASE,
         "langfuse.trace.tags": ["grievance", trace.name, trace.status or "ok"],
         "langfuse.trace.metadata.app": "GRIEVANCE",
         "langfuse.trace.metadata.intake_trace_id": meta.get("intake_trace_id"),
