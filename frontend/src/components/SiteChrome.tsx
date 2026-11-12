@@ -12,8 +12,7 @@ export function SiteFooter({ compact = false }: { compact?: boolean }) {
   if (compact) {
     return (
       <footer className="border-t border-stone bg-canvas">
-        <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-4 text-[12px] text-ink-muted sm:flex-row sm:items-center sm:justify-between">
-          <p>GRIEVANCE, built for HackFusion 4. Demo deployment with synthetic data.</p>
+        <div className="mx-auto flex max-w-7xl justify-center px-4 py-4 text-[12px] text-ink-muted sm:justify-end">
           <nav aria-label="Footer" className="flex flex-wrap gap-x-4 gap-y-1">
             <Link to="/help" className="hover:text-navy hover:underline">Help</Link>
             <Link to="/privacy" className="hover:text-navy hover:underline">Privacy</Link>
