@@ -2,7 +2,6 @@ import { useState, type FormEvent } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { FullLogo } from "../../components/AppShell";
 import { PasswordInput } from "../../components/PasswordInput";
-import { SiteFooter } from "../../components/SiteChrome";
 import { useToast } from "../../components/Toast";
 import { Alert, Button, Field, Input } from "../../components/ui";
 import { homeFor, useAuth } from "../../lib/auth";
@@ -91,7 +90,6 @@ export default function Login() {
           </div>
         </div>
       </main>
-      <SiteFooter compact />
     </div>
   );
 }

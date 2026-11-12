@@ -5,7 +5,6 @@ import { Link, useNavigate } from "react-router-dom";
 import { FullLogo } from "../../components/AppShell";
 import { LegalDialog, type LegalDoc } from "../../components/LegalDialog";
 import { PasswordInput } from "../../components/PasswordInput";
-import { SiteFooter } from "../../components/SiteChrome";
 import { useToast } from "../../components/Toast";
 import { Alert, Button, Input, Select } from "../../components/ui";
 import { api, ApiError } from "../../lib/api";
@@ -371,7 +370,6 @@ export default function Register() {
           setTouched((t) => ({ ...t, agree: true }));
         }}
       />
-      <SiteFooter compact />
     </div>
   );
 }
