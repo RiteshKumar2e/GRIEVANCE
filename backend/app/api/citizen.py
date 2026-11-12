@@ -54,7 +54,7 @@ def converse(body: ConverseIn, request: Request, user: User = Depends(require_ci
     limiter.check(request, "converse", limit=120, window=600, key=str(user.id))
     msgs = [m.model_dump() for m in body.messages]
     turn = conversation.assess(db, msgs, body.language, finish=body.finish)
-    tracer = Tracer(db, "intake_conversation", metadata={"turn": sum(1 for m in msgs if m["role"] == "user")})
+    tracer = Tracer(db, "intake_conversation", metadata={"turn": sum(1 for m in msgs if m["role"] == "user"), "user_id": f"user:{user.id}"})
     with tracer.step("intake_dialogue", {"turns": len(msgs), "language_hint": body.language}) as run:
         run.provider, run.model, run.confidence = "dialogue-manager", "slot-filling-v1", None
         run.output = {"ready": turn.ready, "missing": turn.missing, "language": turn.language, "reasoning": turn.reasoning}

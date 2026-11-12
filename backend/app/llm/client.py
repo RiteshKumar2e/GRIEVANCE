@@ -88,7 +88,7 @@ def _validate(obj: dict[str, Any], schema: dict[str, Any]) -> dict[str, Any]:
     return clean  # unknown keys are dropped on purpose
 
 
-def _call_groq(system: str, user: str, schema: dict[str, Any]) -> tuple[str, str]:
+def _call_groq(system: str, user: str, schema: dict[str, Any]) -> tuple[str, str, dict[str, int] | None]:
     from groq import Groq
 
     s = get_settings()
@@ -103,10 +103,12 @@ def _call_groq(system: str, user: str, schema: dict[str, Any]) -> tuple[str, str
         temperature=0,
         max_tokens=1500,
     )
-    return resp.choices[0].message.content or "", s.groq_model
+    u = getattr(resp, "usage", None)
+    usage = {"input": u.prompt_tokens, "output": u.completion_tokens, "total": u.total_tokens} if u else None
+    return resp.choices[0].message.content or "", s.groq_model, usage
 
 
-def _call_gemini(system: str, user: str, schema: dict[str, Any]) -> tuple[str, str]:
+def _call_gemini(system: str, user: str, schema: dict[str, Any]) -> tuple[str, str, dict[str, int] | None]:
     from google import genai
     from google.genai import types
 
@@ -126,7 +128,10 @@ def _call_gemini(system: str, user: str, schema: dict[str, Any]) -> tuple[str, s
             max_output_tokens=1500,
         ),
     )
-    return resp.text or "", s.gemini_model
+    m = getattr(resp, "usage_metadata", None)
+    usage = ({"input": m.prompt_token_count or 0, "output": m.candidates_token_count or 0, "total": m.total_token_count or 0}
+             if m else None)
+    return resp.text or "", s.gemini_model, usage
 
 
 PROVIDERS = (
@@ -145,10 +150,13 @@ def complete_json(system: str, user: str, schema: dict[str, Any]) -> LLMResult:
             continue
         t0 = time.perf_counter()
         try:
-            raw, model = fn(system, user, schema)
+            raw, model, usage = fn(system, user, schema)
             data = _validate(_parse_json(raw), schema)
             ms = int((time.perf_counter() - t0) * 1000)
-            attempts.append({"provider": name, "status": "ok", "latency_ms": ms})
+            ok: dict[str, Any] = {"provider": name, "status": "ok", "latency_ms": ms}
+            if usage:
+                ok["usage"] = usage  # token counts only; exported to Langfuse for cost tracking
+            attempts.append(ok)
             return LLMResult(data=data, provider=name, model=model, latency_ms=ms, attempts=attempts)
         except Exception as exc:  # provider/network/validation errors all fall through
             ms = int((time.perf_counter() - t0) * 1000)

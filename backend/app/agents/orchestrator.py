@@ -43,7 +43,7 @@ def analyze_intake(
     input_mode: str = "text",
 ) -> IntakeDraft:
     _enforce_daily_cap(db, IntakeDraft, IntakeDraft.citizen_id, citizen.id, get_settings().max_drafts_per_day, "analyses")
-    tracer = Tracer(db, "intake_analysis", metadata={"input_mode": input_mode})
+    tracer = Tracer(db, "intake_analysis", metadata={"input_mode": input_mode, "user_id": f"user:{citizen.id}"})
     with tracer.step("intake", {"chars": len(text), "language_hint": language_hint, "input_mode": input_mode}) as run:
         res = run_intake(db, text, language_hint=language_hint, location_hint=location_hint, gazetteer=geo.gazetteer())
         run.provider, run.model, run.confidence = res.provider, res.model, res.category_confidence

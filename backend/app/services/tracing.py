@@ -5,8 +5,9 @@ Traces store structured decisions, never raw chain-of-thought, and inputs are PI
 from __future__ import annotations
 
 import base64
-import re
+import json
 import logging
+import re
 import secrets
 import time
 import uuid
@@ -162,58 +163,174 @@ def _iso(dt) -> str | None:
     return dt.isoformat() if dt else None
 
 
-def export_to_langfuse(trace: AgentTrace) -> str | None:
-    """Push a redacted, public trace to Langfuse: one trace, one span per agent step (LLM steps as
-    generations) with inputs, structured outputs, reasoning trail, model, confidence and timing.
+# ---------------------------------------------------------------- Langfuse export (OpenTelemetry / OTLP)
+#
+# Traces are recorded in our database first and exported when a workflow finishes, so they are sent as OTLP
+# spans with their real start/end times to Langfuse's real-time endpoint (/api/public/otel/v1/traces).
+# Attribute names follow https://langfuse.com/integrations/native/opentelemetry (observation-level and
+# trace-level attribute tables).
 
-    Returns the real Langfuse trace URL, or None when Langfuse is not configured or the push failed."""
-    from datetime import timedelta
+RELEASE = "1.0.0"
+LLM_PROVIDERS = {"groq", "gemini"}
+# Workflows where the language model actually ran. Other traces only *record* that decision (for example the
+# pipeline re-logs the intake result), so they must not be typed as generations or tokens would be counted twice.
+LLM_TRACES = {"intake_analysis", "intake_conversation"}
+ROOT_TYPE = {"intake_analysis": "agent", "intake_conversation": "agent", "grievance_pipeline": "agent",
+             "sla_scan": "chain", "auto_close": "chain"}
+STEP_TYPE = {
+    "intake": "chain", "intake_dialogue": "chain",    # upgraded to "generation" when an LLM ran in this trace
+    "policy": "guardrail", "policy_preview": "guardrail",  # deterministic policy gate
+    "rag": "retriever",                                # vector search over past grievances
+    "duplicate": "tool",                               # links related reports (changes state)
+    "predictive": "chain",                             # SLA / breach prediction
+    "actions": "tool",                                 # assignment, status, notifications, webhooks
+    "human_review": "event",                           # an officer's decision
+}
 
-    s = get_settings()
-    if not s.langfuse_enabled:
+
+def _ns(dt) -> str:
+    from app.core.time import as_aware
+
+    dt = as_aware(dt) or utcnow()
+    return str(int(dt.timestamp() * 1_000_000_000))
+
+
+def _attr(key: str, value: Any) -> dict[str, Any] | None:
+    if value is None:
         return None
+    if isinstance(value, bool):
+        v: dict[str, Any] = {"boolValue": value}
+    elif isinstance(value, int):
+        v = {"intValue": str(value)}
+    elif isinstance(value, float):
+        v = {"doubleValue": value}
+    elif isinstance(value, (list, tuple)):
+        v = {"arrayValue": {"values": [{"stringValue": str(x)} for x in value]}}
+    elif isinstance(value, dict):
+        v = {"stringValue": json.dumps(value, ensure_ascii=False, default=str)}
+    else:
+        v = {"stringValue": str(value)}
+    return {"key": key, "value": v}
+
+
+def _attrs(pairs: dict[str, Any]) -> list[dict[str, Any]]:
+    return [a for k, val in pairs.items() if (a := _attr(k, val)) is not None]
+
+
+def _usage(run: AgentRun) -> dict[str, int] | None:
+    """Token usage reported by the provider for the successful LLM attempt of this step."""
+    for att in (run.output or {}).get("provider_attempts") or []:
+        if isinstance(att, dict) and att.get("status") == "ok" and isinstance(att.get("usage"), dict):
+            u = {k: int(v) for k, v in att["usage"].items() if isinstance(v, (int, float))}
+            return u or None
+    return None
+
+
+def _trace_context(trace: AgentTrace) -> dict[str, Any]:
+    """Trace-level attributes, repeated on every span so Langfuse can filter observations by them."""
+    s = get_settings()
+    meta = trace.metadata_json or {}
+    session = meta.get("grievance") or (trace.grievance.public_id if getattr(trace, "grievance", None) else None)
+    env = re.sub(r"[^a-z0-9_-]", "-", (s.app_env or "development").lower()) or "development"
+    return {
+        "langfuse.trace.name": trace.name,
+        "langfuse.session.id": session,          # all workflows of one grievance appear as one session
+        "langfuse.user.id": meta.get("user_id"),  # internal account id only, never a name or contact detail
+        "langfuse.environment": env,
+        "langfuse.release": RELEASE,
+        "langfuse.trace.tags": ["grievance", trace.name, trace.status or "ok"],
+        "langfuse.trace.metadata.app": "GRIEVANCE",
+        "langfuse.trace.metadata.privacy": "PII-redacted; structured decision trail, no raw model chain-of-thought",
+    }
+
+
+def build_otlp_payload(trace: AgentTrace) -> dict[str, Any]:
+    """OTLP/JSON ExportTraceServiceRequest for one recorded trace."""
     pv = public_view(trace)
-    now = utcnow().isoformat()
+    ctx = _trace_context(trace)
+    root_id = secrets.token_hex(8)
+    llm_trace = trace.name in LLM_TRACES
     first_input = redact(trace.runs[0].input_summary) if trace.runs else {}
     last_output = pv["steps"][-1]["decision"] if pv["steps"] else {}
-    events: list[dict[str, Any]] = [{
-        "id": uuid.uuid4().hex, "timestamp": now, "type": "trace-create",
-        "body": {"id": trace.trace_id, "name": trace.name, "public": True, "timestamp": _iso(trace.started_at),
-                 "input": first_input, "output": last_output, "tags": ["GRIEVANCE", trace.name],
-                 "metadata": {"app": "GRIEVANCE", "status": trace.status, "duration_ms": trace.duration_ms,
-                              "privacy": "PII-redacted; structured decisions only, no raw model chain-of-thought"}},
+    failed = any(st["error"] for st in pv["steps"]) or trace.status == "error"
+
+    spans: list[dict[str, Any]] = [{
+        "traceId": trace.trace_id, "spanId": root_id, "name": trace.name, "kind": 1,
+        "startTimeUnixNano": _ns(trace.started_at), "endTimeUnixNano": _ns(trace.ended_at or utcnow()),
+        "attributes": _attrs({
+            **ctx,
+            "langfuse.trace.public": True,
+            "langfuse.observation.type": ROOT_TYPE.get(trace.name, "span"),
+            "langfuse.observation.input": {**(trace.metadata_json or {}), **first_input},
+            "langfuse.observation.output": last_output,
+            "langfuse.observation.level": "ERROR" if failed else "DEFAULT",
+            "langfuse.observation.metadata.duration_ms": trace.duration_ms,
+            "langfuse.observation.metadata.steps": len(pv["steps"]),
+        }),
+        "status": {"code": 2 if failed else 1},
     }]
+    from datetime import timedelta
+
     for run, st in zip(trace.runs, pv["steps"]):
         start = run.started_at
         end = start + timedelta(milliseconds=run.duration_ms or 0) if start else None
-        is_llm = (run.provider or "") in {"groq", "gemini"}
-        body = {
-            "id": uuid.uuid4().hex, "traceId": trace.trace_id, "name": st["agent"],
-            "startTime": _iso(start), "endTime": _iso(end),
-            "input": redact(run.input_summary or {}), "output": st["decision"],
-            "metadata": {"provider": st["provider"], "model": st["model"], "confidence": st["confidence"],
-                         "duration_ms": st["duration_ms"], "references": st["references"]},
-            "level": "ERROR" if st["error"] else "DEFAULT",
-            "statusMessage": (run.error or "")[:300] or None,
+        is_generation = llm_trace and (run.provider or "") in LLM_PROVIDERS
+        obs_type = "generation" if is_generation else STEP_TYPE.get(run.agent, "span")
+        attrs: dict[str, Any] = {
+            **ctx,
+            "langfuse.observation.type": obs_type,
+            "langfuse.observation.input": redact(run.input_summary or {}),
+            "langfuse.observation.output": st["decision"],
+            "langfuse.observation.level": "ERROR" if st["error"] else "DEFAULT",
+            "langfuse.observation.status_message": (run.error or "")[:300] or None,
+            "langfuse.observation.metadata.provider": st["provider"],
+            "langfuse.observation.metadata.model": st["model"],
+            "langfuse.observation.metadata.confidence": st["confidence"],
+            "langfuse.observation.metadata.policy_refs": st["references"] or None,
         }
-        if is_llm:
-            body["model"] = run.model
-        events.append({"id": uuid.uuid4().hex, "timestamp": now, "type": "generation-create" if is_llm else "span-create", "body": body})
+        if is_generation:
+            attrs["langfuse.observation.model.name"] = run.model
+            attrs["langfuse.observation.model.parameters"] = {"temperature": 0, "max_tokens": 1500, "response_format": "json"}
+            attrs["langfuse.observation.usage_details"] = _usage(run)
+        spans.append({
+            "traceId": trace.trace_id, "spanId": secrets.token_hex(8), "parentSpanId": root_id, "name": st["agent"], "kind": 1,
+            "startTimeUnixNano": _ns(start), "endTimeUnixNano": _ns(end),
+            "attributes": _attrs(attrs),
+            "status": {"code": 2, "message": (run.error or "")[:300]} if st["error"] else {"code": 1},
+        })
+    return {"resourceSpans": [{
+        "resource": {"attributes": _attrs({"service.name": "grievance-backend", "service.version": RELEASE})},
+        "scopeSpans": [{"scope": {"name": "grievance.tracing", "version": RELEASE}, "spans": spans}],
+    }]}
+
+
+def export_to_langfuse(trace: AgentTrace) -> str | None:
+    """Send one finished trace to Langfuse over OTLP/HTTP (real-time ingestion, v4).
+
+    Returns the verified Langfuse trace URL, or None when Langfuse is not configured or the export failed.
+    A failed export never affects the grievance workflow."""
+    s = get_settings()
+    if not s.langfuse_enabled:
+        return None
     try:
-        r = httpx.post(f"{s.langfuse_host.rstrip('/')}/api/public/ingestion", json={"batch": events},
-                       headers=_lf_auth(), timeout=8.0)
-        errors = []
+        payload = build_otlp_payload(trace)
+        r = httpx.post(f"{s.langfuse_host.rstrip('/')}/api/public/otel/v1/traces", json=payload,
+                       headers={**_lf_auth(), "Content-Type": "application/json", "x-langfuse-ingestion-version": "4"},
+                       timeout=8.0)
+        rejected = 0
         try:
-            errors = r.json().get("errors") or []
-        except ValueError:
+            rejected = int(((r.json() or {}).get("partialSuccess") or {}).get("rejectedSpans") or 0)
+        except (ValueError, AttributeError):
             pass
-        if r.status_code < 300 and not errors:
+        if r.status_code < 300 and not rejected:
             pid = langfuse_project_id()
             if pid:
                 trace.langfuse_url = f"{s.langfuse_host.rstrip('/')}/project/{pid}/traces/{trace.trace_id}"
                 return trace.langfuse_url
             return None
-        log.warning("Langfuse ingestion returned %s with %d errors", r.status_code, len(errors))
+        log.warning("Langfuse OTLP export returned %s (%d rejected spans)", r.status_code, rejected)
     except httpx.HTTPError as exc:
         log.warning("Langfuse export failed: %s", type(exc).__name__)
+    except Exception:  # never let observability break a grievance workflow
+        log.exception("Langfuse export failed while building the payload")
     return None

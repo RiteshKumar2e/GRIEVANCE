@@ -85,8 +85,9 @@ def test_langfuse_export_sends_spans_and_returns_real_url(monkeypatch, client, c
     sent: dict = {}
 
     def fake_post(url, json=None, headers=None, timeout=None):
-        sent.setdefault("batches", []).append(json["batch"])
-        return httpx.Response(207, json={"successes": [], "errors": []}, request=httpx.Request("POST", url))
+        assert url.endswith("/api/public/otel/v1/traces") and headers["x-langfuse-ingestion-version"] == "4"
+        sent.setdefault("batches", []).append(json["resourceSpans"][0]["scopeSpans"][0]["spans"])
+        return httpx.Response(200, json={}, request=httpx.Request("POST", url))
 
     def fake_get(url, headers=None, timeout=None):
         return httpx.Response(200, json={"data": [{"id": "proj123"}]}, request=httpx.Request("GET", url))
@@ -94,12 +95,23 @@ def test_langfuse_export_sends_spans_and_returns_real_url(monkeypatch, client, c
     monkeypatch.setattr(tracing.httpx, "post", fake_post)
     monkeypatch.setattr(tracing.httpx, "get", fake_get)
     submit(client, citizen, "Frequent power cuts in Station Road; the transformer keeps tripping since 3 days.")
-    batch = next(b for b in sent["batches"] if b[0]["body"]["name"] == "grievance_pipeline")
-    assert batch[0]["type"] == "trace-create" and batch[0]["body"]["public"] is True
-    spans = [e["body"] for e in batch[1:]]
-    assert {sp["name"] for sp in spans} >= {"intake", "policy", "rag", "duplicate", "predictive", "actions"}
-    assert all(sp["startTime"] and sp["endTime"] for sp in spans)
-    assert any(sp["output"].get("reasoning") for sp in spans)
+    import json as _json
+
+    def attrs(span):
+        return {a["key"]: next(iter(a["value"].values())) for a in span["attributes"]}
+
+    batch = next(b for b in sent["batches"] if b[0]["name"] == "grievance_pipeline")
+    root, children = batch[0], batch[1:]
+    ra = attrs(root)
+    assert ra["langfuse.trace.public"] is True and ra["langfuse.observation.type"] == "agent"
+    assert ra["langfuse.session.id"].startswith("GRV-")  # all workflows of one grievance share a session
+    assert {sp["name"] for sp in children} >= {"intake", "policy", "rag", "duplicate", "predictive", "actions"}
+    assert all(sp["parentSpanId"] == root["spanId"] and sp["traceId"] == root["traceId"] for sp in children)
+    assert all(int(sp["endTimeUnixNano"]) >= int(sp["startTimeUnixNano"]) > 0 for sp in children)
+    types = {sp["name"]: attrs(sp)["langfuse.observation.type"] for sp in children}
+    assert types["policy"] == "guardrail" and types["rag"] == "retriever" and types["actions"] == "tool"
+    assert types["intake"] != "generation"  # the pipeline only re-logs intake; tokens are not double counted
+    assert any(_json.loads(attrs(sp)["langfuse.observation.output"]).get("reasoning") for sp in children)
     trace = db.scalar(select(AgentTrace).where(AgentTrace.name == "grievance_pipeline").order_by(AgentTrace.id.desc()))
     assert trace.langfuse_url.endswith(f"/project/proj123/traces/{trace.trace_id}")
 
