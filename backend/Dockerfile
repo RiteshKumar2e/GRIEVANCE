@@ -19,7 +19,8 @@ RUN pip install -r requirements.txt \
 
 COPY . .
 
-RUN useradd --create-home --uid 10001 app && mkdir -p /app/uploads && chown -R app:app /app
+# /home/app/.cache holds downloaded models (Whisper, sentence-transformers); compose mounts a volume there.
+RUN useradd --create-home --uid 10001 app && mkdir -p /app/uploads /home/app/.cache && chown -R app:app /app /home/app/.cache
 USER app
 
 EXPOSE 8000

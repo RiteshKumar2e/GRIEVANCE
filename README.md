@@ -310,7 +310,7 @@ recorded step by step: agent, provider and model, inputs (PII-redacted), structu
 confidence, timing, errors and a **decision trail**. Each trail lists what the agent saw, which rule or score it
 applied and what it decided. The trail is a structured explanation, not raw model chain-of-thought.
 
-- **In the app:** Admin → Observability lists traces and shows every step. *Create public link* produces a
+- **In the app:** Admin → AI & RAG Monitoring lists traces and shows every step. *Create public link* produces a
   redacted page at `/share/trace/<token>`. It leaves out complaint text, place names and identities.
 - **In Langfuse:** with keys configured, every trace is exported as a public Langfuse trace (one span per agent,
   LLM calls as generations). The app reads your Langfuse project ID through the API and shows the real link.
@@ -321,8 +321,11 @@ applied and what it decided. The trail is a structured explanation, not raw mode
 1. Create a free project at https://cloud.langfuse.com (or https://us.cloud.langfuse.com).
 2. Project settings → API keys → create a key pair.
 3. In `backend/.env` set `LANGFUSE_HOST`, `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY`, then restart the backend.
-4. Admin → Observability should show *Langfuse connected*. File a grievance, open its trace and use
-   *Open in Langfuse*. That page is publicly viewable.
+   With Docker the `.env` file is read when the container is created, so recreate it:
+   `docker compose up -d --no-build --force-recreate backend`.
+4. Admin → Integrations & Webhooks → *Check connection* should report Langfuse as connected.
+5. File a grievance, then Admin → AI & RAG Monitoring → open its trace → *Open in Langfuse*. That page is
+   publicly viewable; use its URL as the live trace link.
 
 > Status in this repository: the export is implemented and tested against a mocked Langfuse API. It has not
 > been run against a live Langfuse project because no keys were available while building.

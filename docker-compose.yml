@@ -22,7 +22,7 @@ services:
     build:
       context: ./backend
       args:
-        INSTALL_ML: "false"   # set "true" to bake sentence-transformers + faster-whisper into the image
+        INSTALL_ML: "true"    # sentence-transformers + faster-whisper (voice + multilingual RAG); "false" for a small image
     env_file:
       - ./backend/.env
     environment:
@@ -36,6 +36,7 @@ services:
       - "8000:8000"
     volumes:
       - uploads:/app/uploads
+      - models:/home/app/.cache   # downloaded models survive container rebuilds
 
   frontend:
     build:
@@ -54,3 +55,4 @@ services:
 volumes:
   pgdata:
   uploads:
+  models:
