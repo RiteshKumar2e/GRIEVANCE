@@ -150,7 +150,9 @@ def complete_json(system: str, user: str, schema: dict[str, Any]) -> LLMResult:
             continue
         t0 = time.perf_counter()
         try:
-            raw, model, usage = fn(system, user, schema)
+            out = fn(system, user, schema)  # (raw, model) or (raw, model, usage)
+            raw, model = out[0], out[1]
+            usage = out[2] if len(out) > 2 else None
             data = _validate(_parse_json(raw), schema)
             ms = int((time.perf_counter() - t0) * 1000)
             ok: dict[str, Any] = {"provider": name, "status": "ok", "latency_ms": ms}
