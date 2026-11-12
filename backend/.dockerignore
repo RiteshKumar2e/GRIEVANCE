@@ -4,6 +4,10 @@ __pycache__
 .pytest_cache
 .env
 *.db
+*.db-shm
+*.db-wal
+*.db-journal
+**/__pycache__
 uploads
 data/raw/*
 !data/raw/.gitkeep
