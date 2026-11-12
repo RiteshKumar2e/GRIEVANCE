@@ -128,10 +128,11 @@ function RouteMeta() {
 
 /** Signed-in route guard. The backend enforces the same roles on every API call; this only picks the screen. */
 function Protected({ roles, children }: { roles: Role[]; children: ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, loading, signedOut } = useAuth();
   const loc = useLocation();
   if (loading) return <Spinner label="Checking your session" />;
-  if (!user) return <Navigate to="/login" state={{ from: loc.pathname }} replace />;
+  // After a deliberate sign-out go to the landing page; otherwise ask the visitor to sign in.
+  if (!user) return signedOut ? <Navigate to="/" replace /> : <Navigate to="/login" state={{ from: loc.pathname }} replace />;
   if (!roles.includes(user.role)) return <Navigate to={homeFor(user.role)} replace />;
   return <AppShell>{children}</AppShell>;
 }

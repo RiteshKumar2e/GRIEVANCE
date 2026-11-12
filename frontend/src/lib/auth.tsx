@@ -8,7 +8,10 @@ interface AuthState {
   login: (email: string, password: string) => Promise<User>;
   /** Citizens are signed in immediately (returns the user); staff requests return { pending } and stay signed out. */
   register: (data: RegisterData) => Promise<User | PendingRequest>;
+  /** Ends the session. `signedOut` stays true until the next sign-in, so route guards can tell a deliberate
+   * sign-out (go to the landing page) from an expired or missing session (go to sign-in). */
   logout: () => void;
+  signedOut: boolean;
   refresh: () => Promise<void>;
 }
 
@@ -34,8 +37,15 @@ const AuthContext = createContext<AuthState | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [signedOut, setSignedOut] = useState(false);
 
   const logout = useCallback(() => {
+    tokenStore.set(null);
+    setSignedOut(true);
+    setUser(null);
+  }, []);
+  // An expired token (401) also clears the session, but that is not a deliberate sign-out.
+  const expire = useCallback(() => {
     tokenStore.set(null);
     setUser(null);
   }, []);
@@ -56,13 +66,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    setUnauthorizedHandler(logout);
+    setUnauthorizedHandler(expire);
     void refresh();
-  }, [logout, refresh]);
+  }, [expire, refresh]);
 
   const login = useCallback(async (email: string, password: string) => {
     const res = await api<TokenResponse>("/auth/login", { body: { email, password }, auth: false });
     tokenStore.set(res.access_token);
+    setSignedOut(false);
     setUser(res.user);
     return res.user;
   }, []);
@@ -71,11 +82,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const res = await api<TokenResponse | PendingRequest>("/auth/register", { body: data, auth: false });
     if ("pending" in res) return res;
     tokenStore.set(res.access_token);
+    setSignedOut(false);
     setUser(res.user);
     return res.user;
   }, []);
 
-  const value = useMemo(() => ({ user, loading, login, register, logout, refresh }), [user, loading, login, register, logout, refresh]);
+  const value = useMemo(() => ({ user, loading, login, register, logout, signedOut, refresh }), [user, loading, login, register, logout, signedOut, refresh]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
