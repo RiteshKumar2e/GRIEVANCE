@@ -220,7 +220,8 @@ def _officers(db: Session, rows, report: ImportReport, source: str, replace: boo
     from app.core.config import get_settings
 
     depts = {d.code: d for d in db.scalars(select(Department))}
-    pw_hash = hash_password(get_settings().demo_password) if source == DataSource.SYNTHETIC.value else None
+    demo_pw = get_settings().demo_password
+    pw_hash = hash_password(demo_pw) if source == DataSource.SYNTHETIC.value and demo_pw else None
     for i, r in enumerate(rows, start=2):
         dept = depts.get(r["department_code"])
         if dept is None:

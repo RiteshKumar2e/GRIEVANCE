@@ -18,7 +18,7 @@ export interface RegisterData {
   password: string;
   phone?: string;
   preferred_language: string;
-  role?: "citizen" | "officer" | "dept_admin";
+  role?: "citizen" | "officer";
   department_code?: string;
   designation?: string;
 }

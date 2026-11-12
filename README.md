@@ -143,18 +143,11 @@ npm install
 npm run dev                                               # http://localhost:5173
 ```
 
-**Demo accounts** (synthetic, development only; password `Demo@12345`):
-
-| Role                                              | E-mail                         |
-| ------------------------------------------------- | ------------------------------ |
-| Citizen                                           | `citizen@example.org`        |
-| Officer, Water Supply                             | `officer.water@example.org`  |
-| Officer, Women and Child Safety (sensitive cases) | `officer.safety@example.org` |
-| Department admin, Water Supply                    | `deptadmin.water@example.org` |
-
-The system administrator is not a demo account. Set `BOOTSTRAP_ADMIN_EMAIL`, `BOOTSTRAP_ADMIN_PASSWORD` and
-`BOOTSTRAP_ADMIN_NAME` in `backend/.env`; the account is created on start-up and the old demo `admin@example.org`
-account is deactivated.
+**Accounts.** `python -m app.cli init` seeds synthetic demo users for local development only. Their password comes
+from `DEMO_PASSWORD` in `backend/.env`; it is not published here. Set `SEED_DEMO_USERS=false` for any shared or public
+deployment. The system administrator is a real account: set `BOOTSTRAP_ADMIN_EMAIL`, `BOOTSTRAP_ADMIN_PASSWORD` and
+`BOOTSTRAP_ADMIN_NAME` in `backend/.env`; it is created on start-up and the old demo `admin@example.org` account is
+deactivated.
 
 ---
 

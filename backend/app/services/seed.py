@@ -104,8 +104,11 @@ def ensure_bootstrap_admin(db: Session) -> bool:
 
 
 def seed_users(db: Session) -> None:
-    pw = hash_password(get_settings().demo_password)
     real_admin = ensure_bootstrap_admin(db)
+    if not get_settings().demo_password:
+        log.info("DEMO_PASSWORD is not set: no demo accounts created")
+        return
+    pw = hash_password(get_settings().demo_password)
     for email, name, role in DEMO_USERS:
         if real_admin and email == DEMO_ADMIN_EMAIL:
             continue

@@ -52,6 +52,84 @@ function useRecorder(onDone: (blob: Blob) => void) {
   return { supported, recording, error, start, stop };
 }
 
+/* ---------------------------------------------------------------- browser speech recognition */
+
+// Minimal typing for the Web Speech API (Chrome/Edge expose it as webkitSpeechRecognition).
+interface SpeechAlt { transcript: string }
+interface SpeechResultList { length: number; [i: number]: { isFinal: boolean; 0: SpeechAlt } }
+interface SpeechRecognitionLike {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  onresult: ((e: { resultIndex: number; results: SpeechResultList }) => void) | null;
+  onerror: ((e: { error: string }) => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+}
+type SpeechCtor = new () => SpeechRecognitionLike;
+
+function speechCtor(): SpeechCtor | null {
+  if (typeof window === "undefined") return null;
+  const w = window as unknown as { SpeechRecognition?: SpeechCtor; webkitSpeechRecognition?: SpeechCtor };
+  return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
+}
+
+const SPEECH_LANG: Record<string, string> = { en: "en-IN", hi: "hi-IN", mr: "mr-IN" };
+
+/**
+ * Live dictation through the browser's speech service. Final phrases are passed to onFinal;
+ * the in-progress phrase is exposed as `interim` so the citizen can see it while speaking.
+ */
+function useBrowserSpeech(lang: string, onFinal: (text: string) => void) {
+  const [listening, setListening] = useState(false);
+  const [interim, setInterim] = useState("");
+  const [errorKey, setErrorKey] = useState<null | "voiceDenied" | "voiceNoSpeech" | "voiceFailed">(null);
+  const rec = useRef<SpeechRecognitionLike | null>(null);
+  const finalRef = useRef(onFinal);
+  finalRef.current = onFinal;
+  const Ctor = speechCtor();
+
+  useEffect(() => () => rec.current?.stop(), []);
+
+  const start = () => {
+    if (!Ctor) return;
+    setErrorKey(null);
+    setInterim("");
+    const r = new Ctor();
+    r.lang = SPEECH_LANG[lang] ?? "en-IN";
+    r.continuous = true;
+    r.interimResults = true;
+    r.onresult = (e) => {
+      let live = "";
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const res = e.results[i];
+        if (res.isFinal) finalRef.current(res[0].transcript.trim());
+        else live += res[0].transcript;
+      }
+      setInterim(live);
+    };
+    r.onerror = (e) => {
+      if (e.error === "not-allowed" || e.error === "service-not-allowed") setErrorKey("voiceDenied");
+      else if (e.error === "no-speech") setErrorKey("voiceNoSpeech");
+      else if (e.error !== "aborted") setErrorKey("voiceFailed");
+    };
+    r.onend = () => {
+      setListening(false);
+      setInterim("");
+    };
+    try {
+      r.start();
+      rec.current = r;
+      setListening(true);
+    } catch {
+      setErrorKey("voiceFailed");
+    }
+  };
+  const stop = () => rec.current?.stop();
+  return { supported: !!Ctor, listening, interim, errorKey, start, stop };
+}
+
 export default function NewGrievance() {
   const { t, lang } = useI18n();
   const toast = useToast();
@@ -93,6 +171,13 @@ export default function NewGrievance() {
     } finally {
       setBusy(null);
     }
+  });
+
+  // Browser dictation is used only when the server has no speech-to-text model.
+  const speech = useBrowserSpeech(lang, (text) => {
+    if (!text) return;
+    setInput((prev) => (prev ? `${prev} ${text}` : text));
+    setUsedVoice(true);
   });
 
   const converse = async (next: Msg[], finish = false) => {
@@ -208,28 +293,56 @@ export default function NewGrievance() {
               placeholder={t("chatPlaceholder")}
               className="w-full resize-none rounded-md border border-line bg-canvas px-3 py-2.5 text-[15px] leading-relaxed text-ink focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100"
             />
+            {speech.listening && speech.interim && (
+              <p className="mt-1.5 rounded-md bg-canvas px-3 py-1.5 text-[14px] italic text-ink-muted" lang={lang} aria-live="polite">
+                {speech.interim}…
+              </p>
+            )}
             <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
               <div className="flex flex-wrap items-center gap-2">
-                {recorder.recording ? (
-                  <Button type="button" variant="danger" size="sm" onClick={recorder.stop}>
-                    <IconStop width={16} height={16} /> {t("stop")}
-                  </Button>
+                {sttAvailable ? (
+                  /* Server speech-to-text (Whisper): record, then transcribe on the server. */
+                  <>
+                    {recorder.recording ? (
+                      <Button type="button" variant="danger" size="sm" onClick={recorder.stop}>
+                        <IconStop width={16} height={16} /> {t("stop")}
+                      </Button>
+                    ) : (
+                      <Button type="button" variant="secondary" size="sm" onClick={recorder.start} disabled={!recorder.supported || busy !== null} loading={busy === "transcribe"}>
+                        <IconMic width={16} height={16} /> {t("speak")}
+                      </Button>
+                    )}
+                    {recorder.recording && <span className="text-[13px] font-medium text-status-critical" role="status">{t("listening")}</span>}
+                    {recorder.error && <span className="text-[12px] text-status-critical" role="alert">{recorder.error}</span>}
+                  </>
+                ) : speech.supported ? (
+                  /* No server model: the browser's own speech service dictates straight into the box. */
+                  <>
+                    {speech.listening ? (
+                      <Button type="button" variant="danger" size="sm" onClick={speech.stop}>
+                        <IconStop width={16} height={16} /> {t("stop")}
+                      </Button>
+                    ) : (
+                      <Button type="button" variant="secondary" size="sm" onClick={speech.start} disabled={busy !== null}>
+                        <IconMic width={16} height={16} /> {t("speak")}
+                      </Button>
+                    )}
+                    {speech.listening && (
+                      <span className="flex items-center gap-1.5 text-[13px] font-medium text-status-critical" role="status">
+                        <span className="h-2 w-2 animate-pulse rounded-full bg-status-critical motion-reduce:animate-none" aria-hidden />
+                        {t("listening")}
+                      </span>
+                    )}
+                    {speech.errorKey && <span className="text-[12px] text-status-critical" role="alert">{t(speech.errorKey)}</span>}
+                  </>
                 ) : (
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    onClick={recorder.start}
-                    disabled={!recorder.supported || !sttAvailable || busy !== null}
-                    loading={busy === "transcribe"}
-                    title={!sttAvailable ? "Voice input needs Whisper on the server" : undefined}
-                  >
-                    <IconMic width={16} height={16} /> {t("speak")}
-                  </Button>
+                  <>
+                    <Button type="button" variant="secondary" size="sm" disabled>
+                      <IconMic width={16} height={16} /> {t("speak")}
+                    </Button>
+                    <span className="text-[12px] text-ink-muted">{t("voiceUnsupported")}</span>
+                  </>
                 )}
-                {recorder.recording && <span className="text-[13px] font-medium text-status-critical">Recording</span>}
-                {status.data && !sttAvailable && <span className="text-[12px] text-ink-muted">Voice input is not enabled on this server.</span>}
-                {recorder.error && <span className="text-[12px] text-status-critical">{recorder.error}</span>}
               </div>
               <div className="flex gap-2">
                 {userTurns > 0 && (
@@ -247,7 +360,8 @@ export default function NewGrievance() {
       </section>
       {!draft && (
         <p className="mt-3 text-[13px] text-ink-muted">
-          The assistant asks a few questions, then prepares a draft. Nothing is filed until you review and confirm it. Audio is transcribed and not stored.
+          The assistant asks a few questions, then prepares a draft. Nothing is filed until you review and confirm it.{" "}
+          {sttAvailable ? "Audio is transcribed on the server and not stored." : speech.supported ? t("voiceBrowserNote") : null}
         </p>
       )}
 

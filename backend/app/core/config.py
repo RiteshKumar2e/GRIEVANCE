@@ -55,7 +55,7 @@ class Settings(BaseSettings):
     webhook_signing_secret: str = "dev-webhook-secret"
 
     seed_demo_users: bool = True
-    demo_password: str = "Demo@12345"
+    demo_password: str = ""  # empty: no demo logins are created (set it in backend/.env for local development)
     # Real system administrator created at start-up (set both in backend/.env). When set, the demo
     # administrator account (admin@example.org) is not created and any existing one is deactivated.
     bootstrap_admin_email: str = ""

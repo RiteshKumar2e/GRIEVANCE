@@ -7,12 +7,6 @@ import { useToast } from "../../components/Toast";
 import { Alert, Button, Field, Input } from "../../components/ui";
 import { homeFor, useAuth } from "../../lib/auth";
 
-const DEMO = [
-  ["Citizen", "citizen@example.org"],
-  ["Officer · Water", "officer.water@example.org"],
-  ["Officer · Safety (sensitive cases)", "officer.safety@example.org"],
-  ["Department admin · Water", "deptadmin.water@example.org"],
-];
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function Login() {
@@ -89,24 +83,11 @@ export default function Login() {
               </Button>
             </form>
             <p className="mt-4 text-center text-sm text-ink-muted">
-              New citizen?{" "}
+              Don't have an account?{" "}
               <Link to="/register" className="font-medium text-brand-700 hover:underline">
                 Create an account
               </Link>
             </p>
-          </div>
-          <div className="mt-4 rounded-lg border border-saffron-100 bg-saffron-50 p-4 text-sm">
-            <p className="font-semibold text-saffron-700">Demo accounts (synthetic, development only)</p>
-            <p className="mt-0.5 text-xs text-saffron-700">Password for all: the DEMO_PASSWORD in backend/.env (default Demo@12345). Tap to fill.</p>
-            <ul className="mt-2 space-y-1">
-              {DEMO.map(([label, mail]) => (
-                <li key={mail}>
-                  <button type="button" onClick={() => setEmail(mail)} className="break-all text-left text-ink-soft hover:text-ink hover:underline">
-                    <span className="font-medium">{label}:</span> {mail}
-                  </button>
-                </li>
-              ))}
-            </ul>
           </div>
         </div>
       </main>
