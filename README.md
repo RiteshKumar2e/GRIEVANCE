@@ -150,7 +150,11 @@ npm run dev                                               # http://localhost:517
 | Citizen                                           | `citizen@example.org`        |
 | Officer, Water Supply                             | `officer.water@example.org`  |
 | Officer, Women and Child Safety (sensitive cases) | `officer.safety@example.org` |
-| Administrator                                     | `admin@example.org`          |
+| Department admin, Water Supply                    | `deptadmin.water@example.org` |
+
+The system administrator is not a demo account. Set `BOOTSTRAP_ADMIN_EMAIL`, `BOOTSTRAP_ADMIN_PASSWORD` and
+`BOOTSTRAP_ADMIN_NAME` in `backend/.env`; the account is created on start-up and the old demo `admin@example.org`
+account is deactivated.
 
 ---
 

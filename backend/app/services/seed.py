@@ -77,9 +77,38 @@ def seed_datasets(db: Session) -> dict[str, dict]:
     return out
 
 
+DEMO_ADMIN_EMAIL = "admin@example.org"
+
+
+def ensure_bootstrap_admin(db: Session) -> bool:
+    """Create the configured system administrator (once) and retire the demo administrator.
+    The password is only set when the account is created, never reset on later start-ups."""
+    s = get_settings()
+    email = s.bootstrap_admin_email.strip().lower()
+    if not email:
+        return False
+    if len(s.bootstrap_admin_password) < 8:
+        raise RuntimeError("BOOTSTRAP_ADMIN_PASSWORD must be at least 8 characters")
+    admin = db.scalar(select(User).where(User.email == email))
+    if admin is None:
+        db.add(User(email=email, full_name=s.bootstrap_admin_name, role=Role.ADMIN.value,
+                    password_hash=hash_password(s.bootstrap_admin_password), data_source=DataSource.LIVE.value))
+    else:
+        admin.role, admin.is_active = Role.ADMIN.value, True
+    demo = db.scalar(select(User).where(User.email == DEMO_ADMIN_EMAIL))
+    if demo is not None and demo.is_active:
+        demo.is_active = False  # kept (not deleted) so its audit history and notifications stay intact
+        log.info("Demo administrator %s deactivated", DEMO_ADMIN_EMAIL)
+    db.commit()
+    return True
+
+
 def seed_users(db: Session) -> None:
     pw = hash_password(get_settings().demo_password)
+    real_admin = ensure_bootstrap_admin(db)
     for email, name, role in DEMO_USERS:
+        if real_admin and email == DEMO_ADMIN_EMAIL:
+            continue
         if db.scalar(select(User).where(User.email == email)) is None:
             db.add(User(email=email, full_name=name, role=role.value, password_hash=pw, phone="+91-9000000000",
                         data_source=DataSource.SYNTHETIC.value))

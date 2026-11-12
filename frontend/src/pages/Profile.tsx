@@ -156,7 +156,7 @@ function DetailsForm({ user }: { user: User }) {
 
 function PasswordForm() {
   const toast = useToast();
-  const { refresh } = useAuth();
+  const { refresh, user } = useAuth();
   const [f, setF] = useState({ current: "", next: "", confirm: "" });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -185,6 +185,8 @@ function PasswordForm() {
   return (
     <form onSubmit={submit} noValidate className="max-w-md space-y-4">
       {error && <Alert tone="critical">{error}</Alert>}
+      {/* Lets password managers attach the new password to this account. */}
+      <input type="text" name="username" autoComplete="username" value={user!.email} readOnly hidden />
       <Field label="Current password" htmlFor="pw-current">
         <PasswordInput id="pw-current" autoComplete="current-password" value={f.current} onChange={(e) => setF({ ...f, current: e.target.value })} />
       </Field>

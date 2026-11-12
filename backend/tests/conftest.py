@@ -20,6 +20,8 @@ os.environ.update({
     "LANGFUSE_SECRET_KEY": "",
     "JWT_SECRET": "test-secret-not-for-production-use-0123456789",
     "SEED_DEMO_USERS": "true",
+    "BOOTSTRAP_ADMIN_EMAIL": "",  # tests use the demo admin, whatever backend/.env configures
+    "BOOTSTRAP_ADMIN_PASSWORD": "",
     "APP_ENV": "test",
 })
 

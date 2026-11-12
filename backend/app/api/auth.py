@@ -1,7 +1,7 @@
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
@@ -10,10 +10,10 @@ from app.core.ratelimit import limiter
 from app.core.security import create_access_token, hash_password, verify_password
 from app.core.time import utcnow
 from app.db.session import get_db
-from app.models import User
+from app.models import Department, Officer, User
 from app.models.enums import ActorType, DataSource, Role
 from app.schemas.api import LoginIn, PasswordChangeIn, ProfileUpdate, RegisterIn, TokenOut, UserOut
-from app.services import audit
+from app.services import audit, notifications
 from app.services.audit import actor_of
 from app.services.notifications import PREFERENCE_GROUPS
 
@@ -65,7 +65,7 @@ def user_out(u: User) -> UserOut:
     )
 
 
-@router.post("/register", response_model=TokenOut, status_code=201)
+@router.post("/register", status_code=201)
 def register(body: RegisterIn, request: Request, db: Session = Depends(get_db)):
     limiter.check(request, "register", limit=10, window=3600)
     if body.website:  # honeypot tripped: reject without revealing why
@@ -73,15 +73,44 @@ def register(body: RegisterIn, request: Request, db: Session = Depends(get_db)):
     email = body.email.lower()
     if db.scalar(select(User).where(User.email == email)):
         raise HTTPException(status.HTTP_409_CONFLICT, "An account with this e-mail already exists")
+
+    if body.role == Role.CITIZEN.value:
+        u = User(email=email, full_name=body.full_name, phone=body.phone, password_hash=hash_password(body.password),
+                 role=Role.CITIZEN.value, preferred_language=body.preferred_language, data_source=DataSource.LIVE.value,
+                 last_login_at=utcnow())
+        db.add(u)
+        db.flush()
+        audit.record(db, action="auth.register", actor=f"user:{u.id}", actor_type=ActorType.CITIZEN.value)
+        db.commit()
+        token, exp = create_access_token(u.id, u.role)
+        return TokenOut(access_token=token, expires_in=exp, user=user_out(u)).model_dump(mode="json")
+
+    # Staff sign-up: an access request, never an active account.
+    dept = db.scalar(select(Department).where(Department.code == (body.department_code or ""), Department.is_active.is_(True)))
+    if dept is None:
+        raise HTTPException(422, "Choose the department you work in")
     u = User(email=email, full_name=body.full_name, phone=body.phone, password_hash=hash_password(body.password),
-             role=Role.CITIZEN.value, preferred_language=body.preferred_language, data_source=DataSource.LIVE.value,
-             last_login_at=utcnow())
+             role=body.role, preferred_language=body.preferred_language, data_source=DataSource.LIVE.value, is_active=False,
+             department_id=dept.id if body.role == Role.DEPT_ADMIN.value else None)
     db.add(u)
     db.flush()
-    audit.record(db, action="auth.register", actor=f"user:{u.id}", actor_type=ActorType.CITIZEN.value)
+    if body.role == Role.OFFICER.value:
+        n = db.scalar(select(func.count()).select_from(Officer).where(Officer.department_id == dept.id)) or 0
+        code = f"OFF-{dept.code}-{n + 1:02d}"
+        while db.scalar(select(Officer).where(Officer.code == code)):
+            n += 1
+            code = f"OFF-{dept.code}-{n + 1:02d}"
+        db.add(Officer(code=code, user_id=u.id, department_id=dept.id, name=body.full_name,
+                       designation=(body.designation or "Officer").strip() or "Officer", is_active=False,
+                       handles_sensitive=False, data_source=DataSource.LIVE.value))
+    audit.record(db, action="auth.access_requested", actor=f"user:{u.id}", actor_type=ActorType.SYSTEM.value,
+                 explanation={"role": body.role, "department": dept.code})
+    label = "Grievance Officer" if body.role == Role.OFFICER.value else "Department Admin"
+    notifications.notify_admins(db, None, "account_request", f"Access request: {label}",
+                                f"{body.full_name} asked for {label} access to {dept.name}. Review it in User Management.")
     db.commit()
-    token, exp = create_access_token(u.id, u.role)
-    return TokenOut(access_token=token, expires_in=exp, user=user_out(u))
+    return {"pending": True, "role": body.role, "department": dept.name,
+            "message": "Your request has been sent. A system administrator must approve it before you can sign in."}
 
 
 @router.post("/login", response_model=TokenOut)
@@ -89,8 +118,12 @@ def login(body: LoginIn, request: Request, db: Session = Depends(get_db)):
     limiter.check(request, "login", limit=20, window=300)
     u = db.scalar(select(User).where(User.email == body.email.lower()))
     ok = verify_password(body.password, u.password_hash if u else _DUMMY_HASH)
-    if not u or not ok or not u.is_active:
+    if not u or not ok:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Incorrect e-mail or password")
+    if not u.is_active:  # the password was correct, so it is safe to say why
+        detail = ("Your access request is awaiting approval by a system administrator." if u.last_login_at is None
+                  else "This account has been deactivated. Contact your administrator.")
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail)
     # Best effort: a busy database must never block sign-in just to record a timestamp.
     try:
         u.last_login_at = utcnow()

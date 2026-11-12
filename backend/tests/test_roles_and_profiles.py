@@ -163,7 +163,8 @@ def test_admin_user_management_rules(client, admin, db):
     da = login(client, "da2@test.example.org", "Passw0rd1")
     assert client.get("/api/v1/auth/me", headers=da).json()["department_code"] == "ROADS"
     assert client.patch(f"/api/v1/admin/users/{r.json()['id']}", headers=admin, json={"is_active": False}).status_code == 200
-    assert client.post("/api/v1/auth/login", json={"email": "da2@test.example.org", "password": "Passw0rd1"}).status_code == 401
+    denied = client.post("/api/v1/auth/login", json={"email": "da2@test.example.org", "password": "Passw0rd1"})
+    assert denied.status_code == 403 and "deactivated" in denied.json()["detail"]
     listing = client.get("/api/v1/admin/users?role=dept_admin", headers=admin).json()
     assert listing["total"] >= 2 and all(u["role"] == "dept_admin" for u in listing["items"])
     assert db.scalar(select(User).where(User.email == "da2@test.example.org")).is_active is False
@@ -174,3 +175,32 @@ def test_admin_settings_expose_no_secrets(client, admin):
     text = str(s)
     assert "test-secret-not-for-production-use" not in text and PASSWORD not in text
     assert "policy" in s and "providers" in s
+
+
+# ---------------------------------------------------------------- staff sign-up requests
+def test_officer_signup_is_a_request_until_an_admin_approves(client, admin):
+    email = "new.officer@test.example.org"
+    r = client.post("/api/v1/auth/register", json={"email": email, "full_name": "New Officer", "password": "Passw0rd1",
+                                                   "role": "officer", "department_code": "WATER", "designation": "Junior Engineer"})
+    assert r.status_code == 201, r.text
+    assert r.json()["pending"] is True and "access_token" not in r.json()
+    blocked = client.post("/api/v1/auth/login", json={"email": email, "password": "Passw0rd1"})
+    assert blocked.status_code == 403 and "awaiting approval" in blocked.json()["detail"]
+    # Wrong password still gets the generic answer (no account enumeration).
+    assert client.post("/api/v1/auth/login", json={"email": email, "password": "Wrong0000"}).status_code == 401
+    row = client.get(f"/api/v1/admin/users?q={email}", headers=admin).json()["items"][0]
+    assert row["role"] == "officer" and row["is_active"] is False and row["officer_code"].startswith("OFF-WATER-")
+    assert client.patch(f"/api/v1/admin/users/{row['id']}", headers=admin, json={"is_active": True}).status_code == 200
+    h = login(client, email, "Passw0rd1")
+    me = client.get("/api/v1/auth/me", headers=h).json()
+    assert me["role"] == "officer" and me["department_code"] == "WATER" and me["handles_sensitive"] is False
+
+
+def test_staff_signup_requires_a_department(client):
+    r = client.post("/api/v1/auth/register", json={"email": "da.req@test.example.org", "full_name": "Dept Person",
+                                                   "password": "Passw0rd1", "role": "dept_admin"})
+    assert r.status_code == 422
+    # Self-registration can never create a system administrator.
+    r = client.post("/api/v1/auth/register", json={"email": "sneaky@test.example.org", "full_name": "Sneaky",
+                                                   "password": "Passw0rd1", "role": "admin"})
+    assert r.status_code == 422

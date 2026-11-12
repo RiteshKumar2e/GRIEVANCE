@@ -56,6 +56,11 @@ class Settings(BaseSettings):
 
     seed_demo_users: bool = True
     demo_password: str = "Demo@12345"
+    # Real system administrator created at start-up (set both in backend/.env). When set, the demo
+    # administrator account (admin@example.org) is not created and any existing one is deactivated.
+    bootstrap_admin_email: str = ""
+    bootstrap_admin_password: str = ""
+    bootstrap_admin_name: str = "System Administrator"
 
     max_grievances_per_day: int = 10
     max_drafts_per_day: int = 60

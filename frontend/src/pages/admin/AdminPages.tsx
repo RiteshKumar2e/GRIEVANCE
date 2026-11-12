@@ -6,6 +6,7 @@ import { CaseListPage } from "../../components/cases";
 import { Panel } from "../../components/dashboard";
 import { DataTable, Pagination } from "../../components/DataTable";
 import { IconSearch } from "../../components/icons";
+import { PasswordInput } from "../../components/PasswordInput";
 import { useToast } from "../../components/Toast";
 import { Alert, Badge, Button, EmptyState, ErrorState, Field, Input, Modal, PageHeader, Select, SkeletonRows } from "../../components/ui";
 import { api } from "../../lib/api";
@@ -49,6 +50,15 @@ interface UserRow {
   last_login_at: string | null;
 }
 const PAGE = 20;
+
+/** A staff sign-up that has never been approved (inactive, never signed in). */
+const isPending = (u: UserRow) => !u.is_active && !u.last_login_at && u.role !== "citizen";
+
+function UserStatus({ u }: { u: UserRow }) {
+  if (u.is_active) return <Badge tone="good">Active</Badge>;
+  if (isPending(u)) return <Badge tone="warning">Pending approval</Badge>;
+  return <Badge tone="outline">Inactive</Badge>;
+}
 
 export function UserManagement() {
   const { user: me } = useAuth();
@@ -111,7 +121,7 @@ export function UserManagement() {
         <Select aria-label="Account status" value={active} onChange={(e) => { setActive(e.target.value); setPage(0); }}>
           <option value="">Active and inactive</option>
           <option value="true">Active only</option>
-          <option value="false">Inactive only</option>
+          <option value="false">Inactive or pending</option>
         </Select>
       </div>
 
@@ -128,7 +138,7 @@ export function UserManagement() {
           { key: "name", header: "User", render: (u) => <span><span className="font-medium text-ink">{u.full_name}</span>{u.id === me?.id && <Badge tone="brand" className="ml-2">You</Badge>}<span className="block text-[12px] text-ink-muted">{u.email}</span></span> },
           { key: "role", header: "Role", render: (u) => <span className="text-ink-soft">{ROLE_LABEL[u.role]}{u.officer_code && <span className="block font-mono text-[12px] text-ink-muted">{u.officer_code}</span>}</span> },
           { key: "dept", header: "Department", render: (u) => <span className="text-ink-soft">{u.department_name ?? "—"}</span> },
-          { key: "status", header: "Status", render: (u) => (u.is_active ? <Badge tone="good">Active</Badge> : <Badge tone="outline">Inactive</Badge>) },
+          { key: "status", header: "Status", render: (u) => <UserStatus u={u} /> },
           { key: "login", header: "Last sign-in", render: (u) => <span className="text-[13px] text-ink-soft">{u.last_login_at ? relTime(u.last_login_at) : "Never"}</span> },
           { key: "created", header: "Created", render: (u) => <span className="whitespace-nowrap text-[13px] text-ink-soft">{fmtDate(u.created_at, false)}</span> },
           {
@@ -139,7 +149,7 @@ export function UserManagement() {
               <div className="flex justify-end gap-2">
                 {u.role === "dept_admin" && <Button size="sm" variant="ghost" onClick={() => setMoveDept(u)}>Department</Button>}
                 <Button size="sm" variant={u.is_active ? "secondary" : "primary"} disabled={u.id === me?.id} onClick={() => setConfirm(u)} title={u.id === me?.id ? "You cannot deactivate your own account" : undefined}>
-                  {u.is_active ? "Deactivate" : "Activate"}
+                  {u.is_active ? "Deactivate" : isPending(u) ? "Approve" : "Activate"}
                   <span className="sr-only"> {u.full_name}</span>
                 </Button>
               </div>
@@ -154,7 +164,7 @@ export function UserManagement() {
                 <p className="truncate text-[13px] text-ink-muted">{u.email}</p>
                 <p className="text-[13px] text-ink-soft">{ROLE_LABEL[u.role]}{u.department_name ? ` · ${u.department_name}` : ""}</p>
               </div>
-              {u.is_active ? <Badge tone="good">Active</Badge> : <Badge tone="outline">Inactive</Badge>}
+              {<UserStatus u={u} />}
             </div>
             <Button size="sm" variant="secondary" className="mt-3" disabled={u.id === me?.id} onClick={() => setConfirm(u)}>
               {u.is_active ? "Deactivate" : "Activate"}
@@ -169,7 +179,7 @@ export function UserManagement() {
       {confirm && (
         <Modal
           open
-          title={`${confirm.is_active ? "Deactivate" : "Activate"} ${confirm.full_name}?`}
+          title={`${confirm.is_active ? "Deactivate" : isPending(confirm) ? "Approve access for" : "Activate"} ${confirm.full_name}?`}
           onClose={() => setConfirm(null)}
           footer={
             <>
@@ -183,7 +193,9 @@ export function UserManagement() {
           <p className="text-sm text-ink-soft">
             {confirm.is_active
               ? "The user will be signed out at their next request and cannot sign in again until reactivated. Officers holding open cases must have them reassigned first."
-              : "The user will be able to sign in again with their existing password."}
+              : isPending(confirm)
+                ? `${confirm.full_name} asked for ${ROLE_LABEL[confirm.role]} access${confirm.department_name ? ` to ${confirm.department_name}` : ""}. Approving lets them sign in with that role. Check their identity before approving.`
+                : "The user will be able to sign in again with their existing password."}
           </p>
         </Modal>
       )}
@@ -244,7 +256,7 @@ function CreateUser({ onClose }: { onClose: () => void }) {
         <Field label="Full name" htmlFor="cu-name"><Input id="cu-name" value={f.full_name} onChange={set("full_name")} /></Field>
         <Field label="E-mail" htmlFor="cu-email"><Input id="cu-email" type="email" value={f.email} onChange={set("email")} /></Field>
         <Field label="Initial password" htmlFor="cu-pw" hint="At least 8 characters with letters and numbers. Ask the user to change it after first sign-in.">
-          <Input id="cu-pw" type="password" autoComplete="new-password" value={f.password} onChange={set("password")} />
+          <PasswordInput id="cu-pw" autoComplete="new-password" value={f.password} onChange={set("password")} />
         </Field>
         {needsDept && (
           <Field label="Department" htmlFor="cu-dept">

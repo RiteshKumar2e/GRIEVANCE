@@ -11,7 +11,7 @@ const DEMO = [
   ["Citizen", "citizen@example.org"],
   ["Officer · Water", "officer.water@example.org"],
   ["Officer · Safety (sensitive cases)", "officer.safety@example.org"],
-  ["Administrator", "admin@example.org"],
+  ["Department admin · Water", "deptadmin.water@example.org"],
 ];
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 

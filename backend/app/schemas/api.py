@@ -22,6 +22,10 @@ class RegisterIn(BaseModel):
     phone: str | None = Field(default=None, pattern=r"^\+?[0-9\- ]{7,20}$")
     preferred_language: Lang = "en"
     website: str | None = Field(default=None, max_length=200)  # honeypot: humans never fill this
+    # Officer and department-admin sign-ups are requests: the account stays inactive until a system admin approves it.
+    role: Literal["citizen", "officer", "dept_admin"] = "citizen"
+    department_code: str | None = Field(default=None, max_length=40)
+    designation: str | None = Field(default=None, max_length=120)
 
     @field_validator("password")
     @classmethod

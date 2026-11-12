@@ -6,9 +6,27 @@ interface AuthState {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<User>;
-  register: (data: { email: string; full_name: string; password: string; phone?: string; preferred_language: string }) => Promise<User>;
+  /** Citizens are signed in immediately (returns the user); staff requests return { pending } and stay signed out. */
+  register: (data: RegisterData) => Promise<User | PendingRequest>;
   logout: () => void;
   refresh: () => Promise<void>;
+}
+
+export interface RegisterData {
+  email: string;
+  full_name: string;
+  password: string;
+  phone?: string;
+  preferred_language: string;
+  role?: "citizen" | "officer" | "dept_admin";
+  department_code?: string;
+  designation?: string;
+}
+export interface PendingRequest {
+  pending: true;
+  role: string;
+  department: string;
+  message: string;
 }
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -49,8 +67,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return res.user;
   }, []);
 
-  const register = useCallback(async (data: Parameters<AuthState["register"]>[0]) => {
-    const res = await api<TokenResponse>("/auth/register", { body: data, auth: false });
+  const register = useCallback(async (data: RegisterData) => {
+    const res = await api<TokenResponse | PendingRequest>("/auth/register", { body: data, auth: false });
+    if ("pending" in res) return res;
     tokenStore.set(res.access_token);
     setUser(res.user);
     return res.user;
