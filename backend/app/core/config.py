@@ -28,7 +28,7 @@ class Settings(BaseSettings):
 
     # LLM providers: Groq is primary, Gemini is the fallback, deterministic rules last.
     groq_api_key: str = ""
-    groq_model: str = "llama-3.3-70b-versatile"
+    groq_model: str = "openai/gpt-oss-120b"
     gemini_api_key: str = ""
     gemini_model: str = "gemini-2.5-flash"
     llm_timeout_seconds: float = 30.0

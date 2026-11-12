@@ -240,6 +240,7 @@ def _trace_context(trace: AgentTrace) -> dict[str, Any]:
         "langfuse.release": RELEASE,
         "langfuse.trace.tags": ["grievance", trace.name, trace.status or "ok"],
         "langfuse.trace.metadata.app": "GRIEVANCE",
+        "langfuse.trace.metadata.intake_trace_id": meta.get("intake_trace_id"),
         "langfuse.trace.metadata.privacy": "PII-redacted; structured decision trail, no raw model chain-of-thought",
     }
 
@@ -261,7 +262,8 @@ def build_otlp_payload(trace: AgentTrace) -> dict[str, Any]:
             **ctx,
             "langfuse.trace.public": True,
             "langfuse.observation.type": ROOT_TYPE.get(trace.name, "span"),
-            "langfuse.observation.input": {**(trace.metadata_json or {}), **first_input},
+            # Identity and linking fields are already trace attributes; keep the root input to the workflow facts.
+            "langfuse.observation.input": {**{k: v for k, v in (trace.metadata_json or {}).items() if k not in ("user_id", "intake_trace_id")}, **first_input},
             "langfuse.observation.output": last_output,
             "langfuse.observation.level": "ERROR" if failed else "DEFAULT",
             "langfuse.observation.metadata.duration_ms": trace.duration_ms,

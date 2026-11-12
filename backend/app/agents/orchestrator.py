@@ -135,14 +135,20 @@ def confirm_draft(db: Session, citizen: User, token: str, edits: dict[str, Any])
                  explanation={"confirmed": True, "citizen_override_category": citizen_override, "draft_trace": draft.trace_id})
     draft.status, draft.grievance_id = "confirmed", g.id
 
-    run_pipeline(db, g, intake={**ex, "category_confidence": confidence, "citizen_override": citizen_override})
+    run_pipeline(db, g, intake={**ex, "category_confidence": confidence, "citizen_override": citizen_override,
+                                 "intake_trace_id": draft.trace_id})
     db.commit()
     return g
 
 
 # --------------------------------------------------------------------------- main pipeline
 def run_pipeline(db: Session, g: Grievance, *, intake: dict[str, Any]) -> dict[str, Any]:
-    tracer = Tracer(db, "grievance_pipeline", grievance_id=g.id, metadata={"grievance": g.public_id})
+    meta: dict[str, Any] = {"grievance": g.public_id}
+    if g.citizen_id:
+        meta["user_id"] = f"user:{g.citizen_id}"
+    if intake.get("intake_trace_id"):
+        meta["intake_trace_id"] = intake["intake_trace_id"]  # links to the intake_analysis trace in Langfuse
+    tracer = Tracer(db, "grievance_pipeline", grievance_id=g.id, metadata=meta)
     provider, model = intake.get("provider", FALLBACK_PROVIDER), intake.get("model", "rules-v1")
     result: dict[str, Any] = {"trace_id": tracer.trace_id}
     try:
