@@ -3,6 +3,7 @@ import clsx from "clsx";
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FullLogo } from "../../components/AppShell";
+import { LegalDialog, type LegalDoc } from "../../components/LegalDialog";
 import { PasswordInput } from "../../components/PasswordInput";
 import { SiteFooter } from "../../components/SiteChrome";
 import { useToast } from "../../components/Toast";
@@ -20,6 +21,9 @@ const ROLE_OPTIONS: { value: SignupRole; label: string; body: string }[] = [
   { value: "citizen", label: "Citizen", body: "Report civic problems and track them. Your account is ready immediately." },
   { value: "officer", label: "Grievance Officer", body: "Handle grievances for your department. Needs approval by a system administrator." },
 ];
+
+const LEGAL_LINK =
+  "rounded-sm font-medium text-brand-700 underline underline-offset-2 hover:text-brand-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-500";
 
 const STEPS = ["About you", "Your needs", "Password"] as const;
 const STEP_FIELDS: string[][] = [["full_name", "email", "phone"], ["department_code"], ["password", "confirm", "agree"]];
@@ -111,6 +115,7 @@ export default function Register() {
     role: "citizen" as SignupRole, department_code: "", designation: "",
   });
   const [agree, setAgree] = useState(false);
+  const [legal, setLegal] = useState<LegalDoc | null>(null);
   const [pending, setPending] = useState<PendingRequest | null>(null);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [error, setError] = useState<string | null>(null);
@@ -321,8 +326,8 @@ export default function Register() {
                           <input type="checkbox" className="mt-0.5 h-4 w-4 accent-navy" checked={agree} onChange={(e) => { setAgree(e.target.checked); setTouched((t) => ({ ...t, agree: true })); }} aria-invalid={!!show("agree")} />
                           <span>
                             I agree to the{" "}
-                            <Link to="/terms" className="font-medium text-brand-700 underline-offset-2 hover:underline">terms</Link> and{" "}
-                            <Link to="/privacy" className="font-medium text-brand-700 underline-offset-2 hover:underline">privacy policy</Link>.
+                            <button type="button" onClick={() => setLegal("terms")} className={LEGAL_LINK}>terms</button> and{" "}
+                            <button type="button" onClick={() => setLegal("privacy")} className={LEGAL_LINK}>privacy policy</button>.
                           </span>
                         </label>
                         {show("agree") && <p className="mt-1 text-[13px] font-medium text-status-critical" role="alert">{show("agree")}</p>}
@@ -358,6 +363,14 @@ export default function Register() {
           </div>
         </div>
       </main>
+      <LegalDialog
+        doc={legal}
+        onClose={() => setLegal(null)}
+        onAgree={() => {
+          setAgree(true);
+          setTouched((t) => ({ ...t, agree: true }));
+        }}
+      />
       <SiteFooter compact />
     </div>
   );

@@ -4,6 +4,9 @@ import { Logo } from "../../components/AppShell";
 import { SiteFooter } from "../../components/SiteChrome";
 import { SUPPORT_EMAIL } from "../../lib/meta";
 
+export const LEGAL_PROSE =
+  "space-y-6 text-[15px] leading-relaxed text-ink-soft [&_h2]:mb-2 [&_h2]:text-lg [&_h2]:font-semibold [&_h2]:text-ink [&_li]:ml-5 [&_li]:list-disc";
+
 function LegalLayout({ title, updated, children }: { title: string; updated: string; children: ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col bg-canvas">
@@ -16,11 +19,7 @@ function LegalLayout({ title, updated, children }: { title: string; updated: str
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
         <h1 className="font-display text-3xl font-semibold text-ink">{title}</h1>
         <p className="mt-1 text-sm text-ink-muted">Last updated {updated}</p>
-        <div className="mt-4 rounded-md border border-saffron-100 bg-saffron-50 p-3 text-sm text-saffron-700">
-          This is a hackathon demonstration deployment that runs on SYNTHETIC data. This text describes how the software handles data;
-          it is not legal advice and must be reviewed by the operating authority before any real-world use.
-        </div>
-        <div className="mt-8 space-y-6 text-[15px] leading-relaxed text-ink-soft [&_h2]:mb-2 [&_h2]:text-lg [&_h2]:font-semibold [&_h2]:text-ink [&_li]:ml-5 [&_li]:list-disc">
+        <div className={`mt-8 ${LEGAL_PROSE}`}>
           {children}
         </div>
       </main>
@@ -35,9 +34,10 @@ const contact = SUPPORT_EMAIL ? (
   "the grievance cell of the operating authority"
 );
 
-export function PrivacyPolicy() {
+/** Privacy policy text, shared by the full page and the pop-up on the registration form. */
+export function PrivacyContent() {
   return (
-    <LegalLayout title="Privacy policy" updated="11 November 2026">
+    <>
       <section>
         <h2>What we collect</h2>
         <ul>
@@ -74,13 +74,22 @@ export function PrivacyPolicy() {
         <h2>Your choices</h2>
         <p>You can change analytics consent at any time from “Storage preferences” in the footer. For access, correction or deletion of your data, contact {contact}.</p>
       </section>
+    </>
+  );
+}
+
+export function PrivacyPolicy() {
+  return (
+    <LegalLayout title="Privacy policy" updated="11 November 2026">
+      <PrivacyContent />
     </LegalLayout>
   );
 }
 
-export function Terms() {
+/** Terms & conditions text, shared by the full page and the pop-up on the registration form. */
+export function TermsContent() {
   return (
-    <LegalLayout title="Terms & conditions" updated="11 November 2026">
+    <>
       <section>
         <h2>Using the service</h2>
         <ul>
@@ -105,6 +114,14 @@ export function Terms() {
         <h2>Contact</h2>
         <p>Questions about these terms: {contact}.</p>
       </section>
+    </>
+  );
+}
+
+export function Terms() {
+  return (
+    <LegalLayout title="Terms & conditions" updated="11 November 2026">
+      <TermsContent />
     </LegalLayout>
   );
 }
