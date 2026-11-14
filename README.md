@@ -27,24 +27,35 @@ control wherever the risk is high.
 
 ---
 
+## Submission
+
+| Checklist item | Where |
+| --- | --- |
+| GitHub repository | This repository |
+| Mock API README | [API reference](#api-reference), including the [mock integrations](#mock-integrations-and-public-endpoints) receiver; live Swagger at `/api/v1/docs` |
+| Live trace log link | [`grievance_pipeline` trace on Langfuse](https://cloud.langfuse.com/project/cmwddgyt3008uad0e2t2el0qk/traces/fa111f858a7b4ee8b3ff626e4a483d4a) (public, read-only, opens without a Langfuse login) |
+
+---
+
 ## Table of contents
 
-1. [Overview](#overview)
-2. [How the problem statement is met](#how-the-problem-statement-is-met)
-3. [Architecture](#architecture)
-4. [Role-based dashboards](#role-based-dashboards)
-5. [Quick start](#quick-start)
-6. [Accounts and access](#accounts-and-access)
-7. [API reference](#api-reference)
-8. [Observability and the live trace](#observability-and-the-live-trace)
-9. [Data and provenance](#data-and-provenance)
-10. [Security, privacy and responsible AI](#security-privacy-and-responsible-ai)
-11. [Accessibility and inclusion](#accessibility-and-inclusion)
-12. [Testing](#testing)
-13. [Configuration](#configuration)
-14. [Project structure](#project-structure)
-15. [Known limitations](#known-limitations)
-16. [Author](#author)
+1. [Submission](#submission)
+2. [Overview](#overview)
+3. [How the problem statement is met](#how-the-problem-statement-is-met)
+4. [Architecture](#architecture)
+5. [Role-based dashboards](#role-based-dashboards)
+6. [Quick start](#quick-start)
+7. [Accounts and access](#accounts-and-access)
+8. [API reference](#api-reference)
+9. [Observability and the live trace](#observability-and-the-live-trace)
+10. [Data and provenance](#data-and-provenance)
+11. [Security, privacy and responsible AI](#security-privacy-and-responsible-ai)
+12. [Accessibility and inclusion](#accessibility-and-inclusion)
+13. [Testing](#testing)
+14. [Configuration](#configuration)
+15. [Project structure](#project-structure)
+16. [Known limitations](#known-limitations)
+17. [Author](#author)
 
 ---
 
@@ -271,7 +282,25 @@ All endpoints are under `/api/v1`. Interactive documentation is served at **`/ap
 | POST | `/admin/datasets/import` | Import the HackFusion datasets from CSV or XLSX (dry run first) |
 | GET / POST | `/admin/webhooks` · `/admin/webhooks/{id}/test` | Register n8n/Zapier webhooks and send a signed test event |
 | POST | `/admin/jobs/sla-scan` · `/admin/jobs/auto-close` | Run the SLA monitor or auto-close on demand |
-| GET | `/analytics/*` · `/observability/*` | Platform analytics, agent traces and the Langfuse connection check |
+| GET | `/analytics/*` | Platform analytics |
+| GET | `/observability/traces` · `/observability/traces/{id}` | Agent traces with every step, input, output and decision trail |
+| POST / DELETE | `/observability/traces/{id}/share` | Create or revoke a redacted public link for a trace |
+| GET | `/observability/langfuse` · `/observability/errors` | Langfuse connection check and recent export errors |
+
+### Mock integrations and public endpoints
+
+| Method | Path | Auth | Purpose |
+| --- | --- | --- | --- |
+| POST | `/mock/webhook-receiver` | none | **Mock n8n/Zapier "Catch Hook".** Accepts webhook deliveries, verifies `X-Grievance-Signature` exactly as an n8n workflow would, and keeps the last 50 in memory |
+| GET | `/mock/webhook-receiver` | system admin | Lists received deliveries with `signature_valid` for each |
+| GET | `/public/traces/{token}` | none | Redacted, shareable view of one agent trace |
+| GET | `/meta/categories` · `/meta/departments` · `/meta/wards` · `/meta/status` | none | Category Master, department directory, wards and service status |
+| GET / POST | `/notifications` · `/notifications/{id}/read` · `/notifications/read-all` | any | In-app notifications |
+| GET | `/external/datasets` · `/external/bbmp/summary` · `/external/bbmp/records` · `/external/ogd/{key}` | staff | Imported real-world reference data (BBMP, data.gov.in) |
+
+To demo webhooks with no external service, register `http://localhost:8000/api/v1/mock/webhook-receiver` under
+*Admin → Integrations & Webhooks*, press *Send test*, then call `GET /mock/webhook-receiver` as an admin. Each
+delivery is listed with its event name and `signature_valid: true`.
 
 ### Example: conversational intake in Hindi
 
@@ -394,7 +423,10 @@ real-time ingestion endpoint, following the Langfuse tracing best practices:
 | Model and tokens | Model name, parameters and provider-reported token usage on every generation, enabling cost tracking |
 | No double counting | The pipeline re-logs the intake decision as a `chain`, so tokens are attributed only where the model actually ran |
 | Sessions and users | All workflows of one grievance share a session (its grievance ID); internal account IDs only, never names |
-| Environment and release | Set on every observation so test traffic never mixes with production dashboards |
+| Linked traces | Each `grievance_pipeline` trace carries `intake_trace_id` in its metadata, pointing to the `intake_analysis` trace of the draft it came from |
+| Environment, release and version | Set on every observation (`release` and `version` = `1.0.0`) so test traffic never mixes with production dashboards |
+| Tags | `grievance`, the workflow name and its status (`ok` / `error`) for quick filtering |
+| Public by default | Exported traces are marked public, so a trace URL opens read-only without a Langfuse account |
 | Inspectable reasoning | Each step carries a structured decision trail — what the agent saw, which rule or score applied, what it decided — instead of raw chain-of-thought |
 | Privacy | Inputs are PII-redacted before export; complaint text and citizen identity are never sent |
 
