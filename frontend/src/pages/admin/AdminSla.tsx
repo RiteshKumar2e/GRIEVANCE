@@ -64,7 +64,7 @@ export default function AdminSla() {
         {sla.isError && <ErrorState error={sla.error} />}
         {sla.data && sla.data.watchlist.length === 0 && <p className="text-sm text-ink-muted">No open grievance is at risk.</p>}
         {!!sla.data?.watchlist.length && (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="SLA performance table (scrolls sideways)">
             <table className="w-full min-w-[720px] text-sm">
               <thead className="text-left text-xs uppercase tracking-wide text-ink-muted">
                 <tr><th className="pb-2">Grievance</th><th className="pb-2">Dept</th><th className="pb-2">State</th><th className="pb-2">Due</th><th className="pb-2 text-right">Breach prob.</th><th className="pb-2 text-right">Predicted h</th><th className="pb-2 text-right">Escalation</th></tr>

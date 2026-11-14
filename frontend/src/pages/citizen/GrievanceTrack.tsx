@@ -148,7 +148,12 @@ export default function GrievanceTrack() {
                   <dd className="mt-0.5"><SlaIndicator sla={g.sla} /></dd>
                 </div>
               )}
-              {g.is_sensitive && <SensitiveBadge hidden={g.identity_hidden} />}
+              {g.is_sensitive && (
+                <div>
+                  <dt className="text-ink-muted">Privacy</dt>
+                  <dd className="mt-0.5"><SensitiveBadge hidden={g.identity_hidden} /></dd>
+                </div>
+              )}
             </dl>
           </Card>
         </aside>

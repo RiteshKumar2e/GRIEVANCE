@@ -92,7 +92,7 @@ export function Field({ label, hint, error, children, htmlFor }: { label: string
 }
 
 const control =
-  "w-full rounded-md border border-stone-dark bg-surface px-3 text-sm text-ink placeholder:text-ink-muted/80 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 disabled:bg-canvas aria-[invalid=true]:border-status-critical";
+  "w-full rounded-md border border-stone-field bg-surface px-3 text-sm text-ink placeholder:text-ink-muted/80 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 disabled:bg-canvas aria-[invalid=true]:border-status-critical";
 
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(function Input({ className, ...rest }, ref) {
   return <input ref={ref} className={clsx(control, "h-10", className)} {...rest} />;

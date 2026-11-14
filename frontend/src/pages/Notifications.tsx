@@ -67,7 +67,7 @@ export default function Notifications() {
                   </p>
                 </div>
                 {!n.is_read && (
-                  <button onClick={() => markOne(n)} className="shrink-0 text-xs font-medium text-brand-700 hover:underline">
+                  <button onClick={() => markOne(n)} className="inline-flex min-h-6 shrink-0 items-center px-1 text-xs font-medium text-brand-700 hover:underline">
                     Mark read
                   </button>
                 )}

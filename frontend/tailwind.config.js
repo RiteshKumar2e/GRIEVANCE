@@ -5,7 +5,8 @@
 //   Warm Amber #D58A43  primary call to action only (navy text on amber, 6.9:1)
 //   Soft Stone #E8E5DC  dividers and quiet backgrounds
 //   Off-white  #FAF9F6  page background (never pure white)
-// Input borders use a darker stone so form controls keep a 3:1 boundary contrast.
+// Form fields use stone.field (#8C8779): 3.58:1 on surface, 3.41:1 on canvas, 3.12:1 on stone.light, meeting
+// WCAG 1.4.11 for the boundary that identifies an input. stone.dark (1.78:1) is for decorative dividers only.
 export default {
   content: ["./index.html", "./src/**/*.{ts,tsx}"],
   theme: {
@@ -26,7 +27,7 @@ export default {
         // Caution colour for the SYNTHETIC-data notice.
         saffron: { 50: "#F8EEDF", 100: "#EED8B6", 500: "#B9701D", 600: "#985B15", 700: "#7A4810" },
         ink: { DEFAULT: "#101D2B", soft: "#3A4655", muted: "#5B6573" },
-        stone: { DEFAULT: "#E8E5DC", dark: "#C7C2B5", light: "#F1EFE8" },
+        stone: { DEFAULT: "#E8E5DC", dark: "#C7C2B5", light: "#F1EFE8", field: "#8C8779" },
         line: "#E8E5DC",
         canvas: "#FAF9F6",
         surface: "#FFFFFE",

@@ -18,7 +18,7 @@ export const PasswordInput = forwardRef<HTMLInputElement, Omit<InputHTMLAttribut
         type={visible ? "text" : "password"}
         name={rest.name ?? rest.id}
         className={clsx(
-          "h-10 w-full rounded-md border border-stone-dark bg-surface pl-3 pr-11 text-sm text-ink focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 aria-[invalid=true]:border-status-critical",
+          "h-10 w-full rounded-md border border-stone-field bg-surface pl-3 pr-11 text-sm text-ink focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 aria-[invalid=true]:border-status-critical",
           className,
         )}
         {...rest}

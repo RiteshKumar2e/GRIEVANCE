@@ -118,7 +118,7 @@ export default function AdminOverview() {
         <Card title="Department workload & SLA performance" action={<Link to="/admin/sla" className="text-sm font-medium text-brand-700 hover:underline">Bottlenecks →</Link>}>
           {depts.isLoading && <SkeletonRows />}
           {depts.data && (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Department workload table (scrolls sideways)">
               <table className="w-full min-w-[560px] text-sm">
                 <thead className="text-left text-xs uppercase tracking-wide text-ink-muted">
                   <tr><th className="pb-2">Department</th><th className="pb-2 text-right">Open</th><th className="pb-2 text-right">Overdue</th><th className="pb-2 text-right">Resolved</th><th className="pb-2 text-right">SLA met</th><th className="pb-2 text-right">Median h</th></tr>
@@ -147,7 +147,7 @@ export default function AdminOverview() {
       <Card className="mt-5" title="Agent activity (30 days)" action={<Link to="/admin/observability" className="text-sm font-medium text-brand-700 hover:underline">Traces →</Link>}>
         {agents.data && (
           <div className="grid gap-5 lg:grid-cols-[1.5fr_1fr]">
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Officer workload table (scrolls sideways)">
               <table className="w-full min-w-[480px] text-sm">
                 <thead className="text-left text-xs uppercase tracking-wide text-ink-muted">
                   <tr><th className="pb-2">Agent</th><th className="pb-2 text-right">Runs</th><th className="pb-2 text-right">Errors</th><th className="pb-2 text-right">Avg ms</th><th className="pb-2 text-right">Avg confidence</th></tr>

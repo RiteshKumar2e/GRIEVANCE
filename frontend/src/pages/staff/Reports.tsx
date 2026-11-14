@@ -120,7 +120,7 @@ export function ReportBody({ r, showOfficers = true }: { r: Report; showOfficers
         {showOfficers && (
           <Panel title="By assigned officer" className="xl:col-span-2">
             {r.by_officer.length ? (
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Report table (scrolls sideways)">
                 <table className="w-full min-w-[480px] text-sm">
                   <caption className="sr-only">Grievances by assigned officer</caption>
                   <thead className="text-left text-[12px] uppercase tracking-[0.05em] text-ink-muted">

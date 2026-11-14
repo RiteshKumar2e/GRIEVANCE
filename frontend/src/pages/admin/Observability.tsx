@@ -56,6 +56,7 @@ export default function Observability() {
                     {t.grievance_id && <span className="font-mono text-xs text-ink-muted">{t.grievance_id}</span>}
                     {t.errors > 0 && <Badge tone="critical">{t.errors} error</Badge>}
                     {t.shared && <Badge tone="outline">shared</Badge>}
+                    {t.langfuse_url && <Badge tone="brand" title="Export to Langfuse was confirmed by the Langfuse API">in Langfuse</Badge>}
                   </div>
                   <p className="mt-0.5 text-xs text-ink-muted">{fmtDate(t.started_at)} · {t.steps} steps · {t.duration_ms ?? "n/a"} ms · {t.providers.join(", ")}</p>
                 </button>

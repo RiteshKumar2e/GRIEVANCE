@@ -47,13 +47,14 @@ export function Panel({ title, description, action, children, className }: { tit
 /** Metric strip: numbers with labels, separated by rules (no card per metric). */
 export function Metrics({ items }: { items: { label: string; value: ReactNode; hint?: ReactNode; tone?: "critical" | "warning" | "good"; to?: string }[] }) {
   return (
-    <dl className="mb-6 grid grid-cols-2 overflow-hidden rounded-lg border border-line bg-surface sm:grid-cols-3 xl:grid-cols-6">
+    // A list, not a <dl>: items are often links, and a link may not wrap <dt>/<dd> (axe: definition-list, dlitem).
+    <ul role="list" className="mb-6 grid grid-cols-2 overflow-hidden rounded-lg border border-line bg-surface sm:grid-cols-3 xl:grid-cols-6">
       {items.map((m) => {
         const body = (
           <>
-            <dt className="text-[12px] font-medium text-ink-muted">{m.label}</dt>
-            <dd
-              className={clsx("mt-1 text-[26px] font-semibold leading-none tabular-nums", {
+            <span className="block text-[12px] font-medium text-ink-muted">{m.label}</span>
+            <span
+              className={clsx("mt-1 block text-[26px] font-semibold leading-none tabular-nums", {
                 "text-ink": !m.tone,
                 "text-status-critical": m.tone === "critical",
                 "text-status-warning": m.tone === "warning",
@@ -61,12 +62,12 @@ export function Metrics({ items }: { items: { label: string; value: ReactNode; h
               })}
             >
               {m.value}
-            </dd>
-            {m.hint && <dd className="mt-1 text-[12px] text-ink-muted">{m.hint}</dd>}
+            </span>
+            {m.hint && <span className="mt-1 block text-[12px] text-ink-muted">{m.hint}</span>}
           </>
         );
         return (
-          <div key={m.label} className="-mb-px -mr-px border-b border-r border-line">
+          <li key={m.label} className="-mb-px -mr-px border-b border-r border-line">
             {m.to ? (
               <Link to={m.to} className="block h-full px-4 py-4 transition-colors duration-150 hover:bg-canvas focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-500">
                 {body}
@@ -74,10 +75,10 @@ export function Metrics({ items }: { items: { label: string; value: ReactNode; h
             ) : (
               <div className="px-4 py-4">{body}</div>
             )}
-          </div>
+          </li>
         );
       })}
-    </dl>
+    </ul>
   );
 }
 

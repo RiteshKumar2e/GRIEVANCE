@@ -122,7 +122,7 @@ export default function AdminDatasets() {
       <Card className="mt-5" title="Import history">
         {q.data && q.data.imports.length === 0 && <p className="text-sm text-ink-muted">No imports yet.</p>}
         {!!q.data?.imports.length && (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Dataset rows table (scrolls sideways)">
             <table className="w-full min-w-[720px] text-sm">
               <thead className="text-left text-xs uppercase tracking-wide text-ink-muted"><tr><th className="pb-2">When</th><th className="pb-2">Dataset</th><th className="pb-2">File</th><th className="pb-2">Source</th><th className="pb-2">Status</th><th className="pb-2 text-right">Created / updated / skipped</th></tr></thead>
               <tbody className="divide-y divide-line">

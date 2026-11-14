@@ -174,7 +174,10 @@ export default function OfficerGrievance() {
 
       <div className="grid gap-5 xl:grid-cols-[1fr_380px]">
         <div className="space-y-5">
-          <Card title="AI summary" subtitle={g.ai_provider ? `Intake by ${g.ai_provider}` : undefined}>
+          <Card
+            title={g.ai_provider?.startsWith("deterministic") ? "Intake summary" : "AI summary"}
+            subtitle={g.ai_provider ? (g.ai_provider.startsWith("deterministic") ? `Prepared by the rule-based classifier (${g.ai_provider}); no language model was used` : `Drafted by ${g.ai_provider}; checked by rules and the policy gate`) : undefined}
+          >
             <p className="text-sm text-ink">{g.ai_summary || "n/a"}</p>
             <details className="mt-3">
               <summary className="cursor-pointer text-sm font-medium text-brand-700">Original complaint ({g.language.toUpperCase()}, {g.input_mode})</summary>
@@ -308,7 +311,7 @@ export default function OfficerGrievance() {
               <div><dt className="text-xs text-ink-muted">Category</dt><dd className="font-medium">{g.category?.name_en}</dd></div>
               <div><dt className="text-xs text-ink-muted">Department</dt><dd className="font-medium">{g.department?.name ?? "n/a"}</dd></div>
               <div><dt className="text-xs text-ink-muted">Assigned officer</dt><dd className="font-medium">{g.assigned_officer ? `${g.assigned_officer.name} (${g.assigned_officer.code})` : "Unassigned"}</dd></div>
-              <div><dt className="text-xs text-ink-muted">Location</dt><dd className="font-medium">{g.location_text || "n/a"}{g.ward ? ` · ${g.ward}` : ""}</dd></div>
+              <div><dt className="text-xs text-ink-muted">Location</dt><dd className="font-medium">{g.location_text || g.ward || "n/a"}{g.ward && g.location_text && !g.location_text.includes(g.ward) ? ` · ${g.ward}` : ""}</dd></div>
               <div>
                 <dt className="text-xs text-ink-muted">Complainant</dt>
                 <dd className="font-medium">{g.citizen ? (g.citizen.protected ? <span className="text-red-800">Identity protected</span> : `${g.citizen.name}${g.citizen.phone ? ` · ${g.citizen.phone}` : ""}`) : "n/a"}</dd>

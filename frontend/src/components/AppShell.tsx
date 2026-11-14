@@ -52,7 +52,7 @@ export function LanguageSwitcher() {
   return (
     <label className="flex items-center gap-1.5 text-sm">
       <span className="sr-only">Language</span>
-      <select value={lang} onChange={(e) => setLang(e.target.value as Lang)} className="h-9 rounded-md border border-line bg-surface px-2 text-sm text-ink hover:border-stone-dark">
+      <select value={lang} onChange={(e) => setLang(e.target.value as Lang)} className="h-9 rounded-md border border-stone-field bg-surface px-2 text-sm text-ink hover:border-stone-dark">
         {(Object.keys(LANG_LABEL) as Lang[]).map((l) => (
           <option key={l} value={l} lang={l}>
             {LANG_LABEL[l]}
@@ -374,7 +374,7 @@ function CaseSearch({ role }: { role: Role }) {
         value={q}
         onChange={(e) => setQ(e.target.value)}
         placeholder={role === "citizen" ? "Search my grievances" : "Search grievance ID, title, place"}
-        className="h-10 w-56 rounded-md border border-line bg-surface pl-9 pr-3 text-sm text-ink placeholder:text-ink-muted focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 xl:w-72"
+        className="h-10 w-56 rounded-md border border-stone-field bg-surface pl-9 pr-3 text-sm text-ink placeholder:text-ink-muted focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 xl:w-72"
       />
     </form>
   );

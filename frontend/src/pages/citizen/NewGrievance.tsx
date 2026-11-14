@@ -291,7 +291,7 @@ export default function NewGrievance() {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={onKey}
               placeholder={t("chatPlaceholder")}
-              className="w-full resize-none rounded-md border border-line bg-canvas px-3 py-2.5 text-[15px] leading-relaxed text-ink focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100"
+              className="w-full resize-none rounded-md border border-stone-field bg-canvas px-3 py-2.5 text-[15px] leading-relaxed text-ink focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100"
             />
             {speech.listening && speech.interim && (
               <p className="mt-1.5 rounded-md bg-canvas px-3 py-1.5 text-[14px] italic text-ink-muted" lang={lang} aria-live="polite">

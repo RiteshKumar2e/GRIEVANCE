@@ -33,6 +33,20 @@
   }
 }
 
+@layer utilities {
+  /* A horizontal scroll box must be the containing block of its absolutely positioned descendants.
+     Otherwise screen-reader-only labels (`sr-only` is position:absolute) inside wide tables escape the
+     clip and widen the whole page on phones (measured: +198px on /admin/policy at 375px). */
+  .overflow-x-auto {
+    position: relative;
+  }
+  /* Read-only tables that scroll sideways are keyboard-focusable regions (axe: scrollable-region-focusable). */
+  .overflow-x-auto[role="region"]:focus-visible {
+    outline: 2px solid #24666a;
+    outline-offset: 2px;
+  }
+}
+
 @layer components {
   /* Native select with a drawn chevron, so it keeps the platform's accessible behaviour. */
   .lang-select {

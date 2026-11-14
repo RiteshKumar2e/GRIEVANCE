@@ -52,7 +52,7 @@ function DetailsForm({ user }: { user: User }) {
   const { setLang } = useI18n();
   const toast = useToast();
   const can = new Set(user.editable_fields ?? []);
-  const wards = useQuery({ queryKey: ["meta", "wards"], queryFn: () => api<string[] | { name: string }[]>("/meta/wards", { auth: false }), enabled: can.has("ward") });
+  const wards = useQuery({ queryKey: ["meta", "wards"], queryFn: () => api<{ ward: string; locality?: string }[]>("/meta/wards", { auth: false }), enabled: can.has("ward") });
   const initial = { full_name: user.full_name, phone: user.phone ?? "", preferred_language: user.preferred_language, address: user.address ?? "", ward: user.ward ?? "" };
   const [form, setForm] = useState(initial);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -90,7 +90,8 @@ function DetailsForm({ user }: { user: User }) {
       setBusy(false);
     }
   };
-  const wardOptions = (wards.data ?? []).map((w) => (typeof w === "string" ? w : w.name));
+  // /meta/wards returns { ward, locality, ... } (see backend api/meta.py); the value saved is the ward name.
+  const wardOptions = (wards.data ?? []).map((w) => ({ value: w.ward, label: w.locality ? `${w.ward} · ${w.locality}` : w.ward }));
   const adminNote = "Managed by your system administrator.";
 
   return (
@@ -131,7 +132,7 @@ function DetailsForm({ user }: { user: User }) {
             {wardOptions.length ? (
               <Select id="pf-ward" value={form.ward} onChange={set("ward")}>
                 <option value="">Not set</option>
-                {wardOptions.map((w) => <option key={w} value={w}>{w}</option>)}
+                {wardOptions.map((w) => <option key={w.value} value={w.value}>{w.label}</option>)}
               </Select>
             ) : (
               <Input id="pf-ward" value={form.ward} onChange={set("ward")} maxLength={80} />

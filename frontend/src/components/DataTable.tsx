@@ -100,7 +100,7 @@ export function DataTable<T>({
                     {c.sortValue ? (
                       <button
                         onClick={() => toggle(c.key)}
-                        className="inline-flex items-center gap-1 rounded-sm uppercase hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-500"
+                        className="inline-flex min-h-6 items-center gap-1 rounded-sm uppercase hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-500"
                       >
                         {c.header}
                         <span aria-hidden className={clsx("text-[10px]", active ? "text-ink" : "text-ink-muted/60")}>

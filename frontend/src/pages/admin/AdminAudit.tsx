@@ -37,7 +37,7 @@ export default function AdminAudit() {
       {q.data?.items.length === 0 && <EmptyState title="No audit events match" />}
       {!!q.data?.items.length && (
         <>
-          <div className="overflow-x-auto rounded-lg border border-line bg-surface">
+          <div className="overflow-x-auto rounded-lg border border-line bg-surface" tabIndex={0} role="region" aria-label="Audit log table (scrolls sideways)">
             <table className="w-full min-w-[900px] text-sm">
               <thead className="border-b border-line bg-canvas text-left text-xs uppercase tracking-wide text-ink-muted">
                 <tr><th className="px-4 py-2.5">Time</th><th className="px-3 py-2.5">Actor</th><th className="px-3 py-2.5">Action</th><th className="px-3 py-2.5">Grievance</th><th className="px-3 py-2.5">Model</th><th className="px-3 py-2.5 text-right">Conf.</th><th className="px-3 py-2.5">Policy refs</th></tr>

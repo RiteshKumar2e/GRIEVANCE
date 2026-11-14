@@ -33,7 +33,7 @@ const TEXT_LINK = clsx(
 );
 
 const NAV_LINK = clsx(
-  "block rounded-sm px-3 py-2 text-[15px] font-medium text-ink-soft decoration-2 underline-offset-[6px] transition-colors duration-150 hover:text-navy hover:underline motion-reduce:transition-none",
+  "block whitespace-nowrap rounded-sm px-3 py-2 text-[15px] font-medium text-ink-soft decoration-2 underline-offset-[6px] transition-colors duration-150 hover:text-navy hover:underline motion-reduce:transition-none",
   FOCUS,
 );
 
@@ -90,7 +90,7 @@ function LanguageSelect({ id, label }: { id: string; label: string }) {
         value={lang}
         onChange={(e) => setLang(e.target.value as Lang)}
         className={clsx(
-          "lang-select h-11 cursor-pointer appearance-none rounded-md border border-stone-dark bg-surface pl-3 pr-8 text-[15px] font-medium text-navy sm:pl-9",
+          "lang-select h-11 cursor-pointer appearance-none rounded-md border border-stone-field bg-surface pl-3 pr-8 text-[15px] font-medium text-navy sm:pl-9",
           "transition-colors duration-150 hover:border-navy motion-reduce:transition-none",
           FOCUS,
         )}
@@ -123,7 +123,7 @@ function Header({ submitTo }: { submitTo: string }) {
         toggleRef.current?.focus();
       }
     };
-    const mq = window.matchMedia?.("(min-width: 1024px)");
+    const mq = window.matchMedia?.("(min-width: 1280px)");
     const onWide = () => mq?.matches && setOpen(false);
     document.addEventListener("keydown", onKey);
     mq?.addEventListener?.("change", onWide);
@@ -148,7 +148,7 @@ function Header({ submitTo }: { submitTo: string }) {
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6 lg:h-[72px]">
         <Logo size={32} />
 
-        <nav aria-label="Primary" className="hidden lg:block">
+        <nav aria-label="Primary" className="hidden xl:block">
           <ul className="flex items-center gap-1">
             {links.map(([href, label]) => (
               <li key={href}>
@@ -166,20 +166,20 @@ function Header({ submitTo }: { submitTo: string }) {
           <Link
             to={accountTo}
             className={clsx(
-              "hidden min-h-11 items-center rounded-md px-3 text-[15px] font-semibold text-navy transition-colors duration-150 hover:bg-navy/[0.05] motion-reduce:transition-none md:inline-flex",
+              "hidden min-h-11 items-center whitespace-nowrap rounded-md px-3 text-[15px] font-semibold text-navy transition-colors duration-150 hover:bg-navy/[0.05] motion-reduce:transition-none md:inline-flex",
               FOCUS,
             )}
           >
             {accountLabel}
           </Link>
-          <Link to={submitTo} className={clsx(BTN_PRIMARY, "hidden !min-h-11 !px-4 !py-2 !text-[15px] md:inline-flex")}>
+          <Link to={submitTo} className={clsx(BTN_PRIMARY, "hidden whitespace-nowrap !min-h-11 !px-4 !py-2 !text-[15px] md:inline-flex")}>
             {c.submit}
           </Link>
           <button
             ref={toggleRef}
             type="button"
             className={clsx(
-              "flex h-11 w-11 items-center justify-center rounded-md border border-stone-dark text-navy transition-colors duration-150 hover:bg-navy/[0.05] motion-reduce:transition-none lg:hidden",
+              "flex h-11 w-11 items-center justify-center rounded-md border border-stone-dark text-navy transition-colors duration-150 hover:bg-navy/[0.05] motion-reduce:transition-none xl:hidden",
               FOCUS,
             )}
             onClick={() => setOpen((o) => !o)}
@@ -192,7 +192,7 @@ function Header({ submitTo }: { submitTo: string }) {
         </div>
       </div>
 
-      <div id="site-menu" hidden={!open} className="border-t border-stone bg-canvas lg:hidden">
+      <div id="site-menu" hidden={!open} className="border-t border-stone bg-canvas xl:hidden">
         <nav aria-label="Primary, mobile" className="mx-auto max-w-6xl px-4 pb-6 pt-2 sm:px-6">
           <ul>
             {links.map(([href, label]) => (
