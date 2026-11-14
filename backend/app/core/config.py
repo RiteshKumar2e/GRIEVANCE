@@ -53,6 +53,9 @@ class Settings(BaseSettings):
     langfuse_secret_key: str = ""
 
     webhook_signing_secret: str = "dev-webhook-secret"
+    # Comma-separated hostnames webhooks may reach even though they resolve to private addresses
+    # (e.g. "n8n" for a self-hosted n8n container). Everything else must resolve to a public address.
+    webhook_allowed_hosts: str = ""
 
     seed_demo_users: bool = True
     demo_password: str = ""  # empty: no demo logins are created (set it in backend/.env for local development)

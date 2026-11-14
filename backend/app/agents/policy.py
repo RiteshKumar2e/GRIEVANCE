@@ -111,7 +111,8 @@ def evaluate(
         sla_hours=sla_hours,
         sla_due_at=submitted_at + timedelta(hours=sla_hours),
         is_sensitive=bool(category.is_sensitive),
-        hide_identity=bool(category.hide_identity or category.is_sensitive),
+        # Sensitive indicators under a non-sensitive category also hide identity until a human reclassifies.
+        hide_identity=bool(category.hide_identity or category.is_sensitive or other_sensitive),
         confidence=round(confidence, 3),
         threshold=threshold,
         requires_human_review=review,

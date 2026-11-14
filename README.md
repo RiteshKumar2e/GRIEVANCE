@@ -14,7 +14,7 @@ control wherever the risk is high.
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16%20%2B%20pgvector-4169E1?logo=postgresql&logoColor=white)
 ![Langfuse](https://img.shields.io/badge/Tracing-Langfuse%20(OTLP)-0A0A0A)
-![Tests](https://img.shields.io/badge/tests-93%20backend%20%C2%B7%2010%20frontend-2E7D32)
+![Tests](https://img.shields.io/badge/tests-121%20backend%20%C2%B7%2010%20frontend-2E7D32)
 
 **HackFusion 4.0 · Agentic AI Track**
 
@@ -99,10 +99,10 @@ routine backend work, while sending anything sensitive or uncertain to a person.
 | Criterion | Evidence |
 | --- | --- |
 | Real-world problem understanding (20%) | Grounded in 1.23M real BBMP grievances; covers the full lifecycle including disputes, reopening and escalation |
-| Technical quality and working agentic implementation (20%) | Six agents behind one orchestrator, PostgreSQL + pgvector, 93 backend and 10 frontend tests |
+| Technical quality and working agentic implementation (20%) | Six agents behind one orchestrator, PostgreSQL + pgvector, 121 backend and 10 frontend tests |
 | Innovation and appropriate AI use (15%) | LLMs are advisory; a rule-based policy gate and human review decide; cross-language duplicate linking |
 | Feasibility and integration potential (15%) | Docker deployment, signed webhooks for n8n/Zapier, dataset importers for the official HackFusion files |
-| Security, privacy and responsible AI (10%) | Role and object-level access control, identity hiding, PII redaction, full audit log, no auto-closure of sensitive cases |
+| Security, privacy and responsible AI (10%) | Role and object-level access control, identity hiding, PII redaction, full audit log, no auto-closure of sensitive cases, SSRF-safe webhooks |
 | Accessibility and inclusion (10%) | Three languages, voice in and read-aloud out, keyboard and screen-reader support |
 | Observability, traceability and demo quality (10%) | Live Langfuse traces plus an in-app trace explorer with shareable redacted links |
 
@@ -302,6 +302,12 @@ To demo webhooks with no external service, register `http://localhost:8000/api/v
 *Admin → Integrations & Webhooks*, press *Send test*, then call `GET /mock/webhook-receiver` as an admin. Each
 delivery is listed with its event name and `signature_valid: true`.
 
+Webhook URLs are checked against server-side request forgery when they are registered and again before every
+delivery: hosts that resolve to loopback, private, link-local (including cloud metadata), CGNAT or reserved
+addresses are refused, embedded credentials are rejected and redirects are not followed. The only loopback URL
+accepted is the built-in mock receiver path above. To reach a trusted internal service such as a self-hosted n8n
+container, list its hostname in `WEBHOOK_ALLOWED_HOSTS`.
+
 ### Example: conversational intake in Hindi
 
 **1. The citizen writes without saying where.**
@@ -490,7 +496,7 @@ Responsive layouts for mobile, tablet and desktop, and reduced-motion support.
 ## Testing
 
 ```bash
-cd backend  && python -m pytest -q                                               # 93 tests
+cd backend  && python -m pytest -q                                               # 121 tests
 cd frontend && npm run lint && npm run typecheck && npm test && npm run build    # 10 tests
 ```
 
@@ -499,7 +505,9 @@ scenarios — confirmed submission, tracking, sensitive review, sensitive cases 
 review, duplicates preserving records, RAG relevance, SLA warnings, dispute and reopen, unauthorised access, AI
 audit events and missing-credential fallback — plus role-based access for all four roles, department isolation,
 profile field permissions, password change, notification preferences, officer approval, the OTLP trace export,
-webhook signatures, the BBMP importer and redaction, and security headers.
+webhook signatures, SSRF blocking of webhook destinations, re-checking safety signals when a citizen edits the
+draft before confirming, Hindi, Marathi and Hinglish prompt-injection detection, the BBMP importer and redaction,
+and security headers.
 
 ## Configuration
 
@@ -513,7 +521,7 @@ webhook signatures, the BBMP importer and redaction, and security headers.
 | Observability | `LANGFUSE_HOST`, `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY` |
 | Accounts | `BOOTSTRAP_ADMIN_EMAIL`, `BOOTSTRAP_ADMIN_PASSWORD`, `BOOTSTRAP_ADMIN_NAME`, `SEED_DEMO_USERS`, `DEMO_PASSWORD` |
 | Policy and limits | confidence, duplicate and SLA thresholds, `MAX_GRIEVANCES_PER_DAY`, `ENFORCE_HTTPS` |
-| Integrations | `WEBHOOK_SIGNING_SECRET`, `DATA_GOV_IN_API_KEY` |
+| Integrations | `WEBHOOK_SIGNING_SECRET`, `WEBHOOK_ALLOWED_HOSTS`, `DATA_GOV_IN_API_KEY` |
 
 `frontend/.env` holds public values only: `VITE_API_BASE_URL`, `VITE_SITE_URL`, `VITE_SUPPORT_EMAIL`.
 

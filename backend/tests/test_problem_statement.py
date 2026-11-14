@@ -142,7 +142,7 @@ def test_mock_receiver_verifies_signatures(client, admin):
 
 
 def test_webhook_test_event_reports_delivery_result(client, admin):
-    hid = client.post("/api/v1/admin/webhooks", headers=admin, json={"name": "dead", "url": "http://127.0.0.1:9/x", "events": []}).json()["id"]
+    hid = client.post("/api/v1/admin/webhooks", headers=admin, json={"name": "dead", "url": "http://127.0.0.1:9/api/v1/mock/webhook-receiver", "events": []}).json()["id"]
     r = client.post(f"/api/v1/admin/webhooks/{hid}/test", headers=admin).json()
     assert r["status"] in ("pending", "failed") and r["error"]
 

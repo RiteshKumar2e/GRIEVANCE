@@ -85,7 +85,7 @@ def test_observability_trace_detail(client, admin, citizen):
 
 def test_webhook_registration_queues_deliveries(client, admin, citizen, db):
     r = client.post("/api/v1/admin/webhooks", headers=admin,
-                    json={"name": "test", "url": "http://127.0.0.1:9/hook", "events": ["grievance.created"]})
+                    json={"name": "test", "url": "http://127.0.0.1:9/api/v1/mock/webhook-receiver", "events": ["grievance.created"]})
     assert r.status_code == 201
     submit(client, citizen, "Frequent power cuts in Station Road; the transformer keeps tripping.")
     hooks = client.get("/api/v1/admin/webhooks", headers=admin).json()["items"]

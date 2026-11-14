@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.agents import orchestrator
 from app.core.config import get_settings
 from app.core.deps import require_admin
+from app.core.netguard import UnsafeURL, check_webhook_url
 from app.core.security import hash_password
 from app.core.time import as_aware
 from app.db.session import get_db
@@ -221,6 +222,10 @@ def create_webhook(body: WebhookIn, user: User = Depends(require_admin), db: Ses
     bad = [e for e in body.events if e not in EVENTS]
     if bad:
         raise HTTPException(422, f"Unknown events: {bad}")
+    try:
+        check_webhook_url(body.url)
+    except UnsafeURL as exc:
+        raise HTTPException(422, str(exc))
     h = Webhook(name=body.name, url=body.url, events=body.events, is_active=body.is_active)
     db.add(h)
     actor, actor_type = actor_of(user)
@@ -235,6 +240,9 @@ def toggle_webhook(hid: int, is_active: bool = Query(...), user: User = Depends(
     if h is None:
         raise HTTPException(404, "Webhook not found")
     h.is_active = is_active
+    actor, actor_type = actor_of(user)
+    audit.record(db, action="webhook.enabled" if is_active else "webhook.disabled", actor=actor, actor_type=actor_type,
+                 explanation={"id": hid, "name": h.name})
     db.commit()
     return {"ok": True}
 

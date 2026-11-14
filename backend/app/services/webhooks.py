@@ -13,6 +13,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+from app.core.netguard import UnsafeURL, check_webhook_url
 from app.core.time import utcnow
 from app.db.session import SessionLocal
 from app.models import Grievance, Webhook, WebhookDelivery
@@ -68,11 +69,17 @@ def deliver_pending(limit: int = 50) -> int:
                 d.status = "failed"
                 d.last_error = "webhook disabled"
                 continue
+            try:
+                check_webhook_url(hook.url)  # re-checked at send time: DNS may have changed since registration
+            except UnsafeURL as exc:
+                d.status, d.last_error = "failed", f"blocked: {exc}"[:500]
+                log.warning("webhook %s blocked by SSRF guard: %s", hook.id, exc)
+                continue
             body = json.dumps(d.payload, ensure_ascii=False).encode("utf-8")
             d.attempts += 1
             try:
                 r = httpx.post(
-                    hook.url, content=body, timeout=5.0,
+                    hook.url, content=body, timeout=5.0, follow_redirects=False,
                     headers={"Content-Type": "application/json", "X-Grievance-Event": d.event,
                              "X-Grievance-Signature": f"sha256={sign(body)}"},
                 )

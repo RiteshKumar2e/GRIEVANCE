@@ -73,6 +73,8 @@ async def lifespan(app: FastAPI):
     get_engine()
     if s.is_production and s.jwt_secret.startswith(("dev-", "change-me")):
         raise RuntimeError("JWT_SECRET must be set to a strong value in production")
+    if s.is_production and (s.webhook_signing_secret.startswith(("dev-", "change-me")) or len(s.webhook_signing_secret) < 16):
+        raise RuntimeError("WEBHOOK_SIGNING_SECRET must be set to a strong value in production")
     task = asyncio.create_task(_sla_monitor(s.sla_scan_interval_seconds)) if s.sla_scan_interval_seconds > 0 else None
     yield
     if task:

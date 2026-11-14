@@ -33,7 +33,16 @@ URGENCY_WORDS = {
 
 INJECTION_PATTERNS = re.compile(
     r"(ignore (all|any|the)? ?(previous|above|prior) (instructions|rules)|system prompt|you are now|"
-    r"disregard (the )?(rules|policy)|set (status|confidence)|mark (this|it) as (closed|resolved)|act as (an? )?admin)",
+    r"disregard (the )?(rules|policy)|set (status|confidence)|mark (this|it) as (closed|resolved)|act as (an? )?admin|"
+    # Hinglish (romanised Hindi)
+    r"(pichhle|pichle|upar ke|saare|sabhi) (nirdesh|instructions?|rules?) (ko )?(ignore|bhool|bhul|anadekha)|"
+    r"(status|confidence) .{0,20}(set|change|badal) (kar ?do|karo)|"
+    r"(complaint|shikayat|shikaayat|ticket) (ko )?(close|resolve|resolved|band) (kar ?do|karo|mark)|admin ki tarah|"
+    # Hindi (Devanagari)
+    r"(पिछले|ऊपर के|सभी|सारे) (निर्देशों|निर्देश|नियमों|नियम) (को )?(अनदेखा|नज़रअंदाज़|नजरअंदाज|भूल)|"
+    r"सिस्टम प्रॉम्प्ट|शिकायत को (बंद|हल) (कर दो|करो|मानो|मार्क)|एडमिन की तरह|"
+    # Marathi (Devanagari)
+    r"(मागील|आधीच्या|सर्व) (सूचना|सूचनांकडे|नियम|नियमांकडे) .{0,12}दुर्लक्ष|ही तक्रार (बंद|निकाली) (करा|कर)|प्रशासकासारखे)",
     re.IGNORECASE,
 )
 

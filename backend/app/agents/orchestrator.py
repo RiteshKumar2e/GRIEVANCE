@@ -16,7 +16,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.agents import actions, duplicate, policy, predictive, rag
-from app.agents.intake import run_intake
+from app.agents.intake import INJECTION_PATTERNS, run_intake, sensitive_signal
 from app.core.config import get_settings
 from app.core.errors import DomainError, Forbidden, NotFound, PolicyViolation
 from app.core.time import as_aware, utcnow
@@ -135,8 +135,17 @@ def confirm_draft(db: Session, citizen: User, token: str, edits: dict[str, Any])
                  explanation={"confirmed": True, "citizen_override_category": citizen_override, "draft_trace": draft.trace_id})
     draft.status, draft.grievance_id = "confirmed", g.id
 
+    # The citizen may edit the text after analysis. Re-run the deterministic safety checks on what is
+    # actually filed, so an edit cannot smuggle in sensitive content or instructions past the policy gate.
+    final_text = f"{g.title}\n{g.description}"
+    active = list(db.scalars(select(GrievanceCategory).where(GrievanceCategory.is_active.is_(True))))
+    injection = bool(ex.get("injection_suspected")) or bool(INJECTION_PATTERNS.search(final_text))
+    signals = sorted(set(ex.get("sensitive_signals") or []) | set(sensitive_signal(final_text, active)))
+    text_edited = g.description != draft.raw_text or (edits.get("title") not in (None, ex["title"]))
+
     run_pipeline(db, g, intake={**ex, "category_confidence": confidence, "citizen_override": citizen_override,
-                                 "intake_trace_id": draft.trace_id})
+                                 "injection_suspected": injection, "sensitive_signals": signals,
+                                 "text_edited": text_edited, "intake_trace_id": draft.trace_id})
     db.commit()
     return g
 
