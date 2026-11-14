@@ -79,7 +79,7 @@ async def transcribe(request: Request, audio: UploadFile = File(...), language: 
     if len(data) > get_settings().max_upload_mb * 1024 * 1024:
         raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, "Audio file too large")
     if len(data) < 1000:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Recording is empty or too short")
+        raise HTTPException(422, "Recording is empty or too short")
     fd, path = tempfile.mkstemp(suffix=os.path.splitext(audio.filename or "a.webm")[1] or ".webm")
     try:
         with os.fdopen(fd, "wb") as fh:
@@ -94,7 +94,7 @@ async def transcribe(request: Request, audio: UploadFile = File(...), language: 
         except OSError:
             pass
     if not t.text:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "No speech detected. Please try again or type your complaint.")
+        raise HTTPException(422, "No speech detected. Please try again or type your complaint.")
     return TranscriptOut(text=t.text, language=t.language, confidence=t.confidence, provider=t.provider)
 
 

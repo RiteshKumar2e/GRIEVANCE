@@ -10,12 +10,14 @@ Category Master, which is also used to sanity-check any LLM answer.
 from __future__ import annotations
 
 import re
+from functools import lru_cache
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.privacy import redact_text
 from app.llm import embeddings
 from app.llm.client import FALLBACK_MODEL, FALLBACK_PROVIDER, LLMResult, complete_json, wrap_untrusted
 from app.models import GrievanceCategory
@@ -132,6 +134,13 @@ def sensitive_signal(text: str, categories: list[GrievanceCategory]) -> list[str
     return [code for code, s in kw.items() if s > 0]
 
 
+@lru_cache(maxsize=8)
+def _prototype_vectors(provider: str, texts: tuple[str, ...]) -> list[list[float]]:
+    """Category description embeddings. Keyed by the exact texts and the embedder, so an edit to the
+    Category Master (or a provider switch) produces a fresh entry instead of a stale vector."""
+    return embeddings.embed_texts(list(texts))
+
+
 def classify_rules(text: str, categories: list[GrievanceCategory]) -> tuple[str, float, list[dict[str, Any]]]:
     """Keyword evidence blended with embedding similarity to category descriptions.
 
@@ -139,7 +148,8 @@ def classify_rules(text: str, categories: list[GrievanceCategory]) -> tuple[str,
     default 0.70 threshold; several consistent hits are needed to clear it comfortably."""
     kw = keyword_scores(text, categories)
     vec = embeddings.embed_text(text)
-    protos = embeddings.embed_texts([f"{c.name_en}. {c.name_hi or ''} {c.name_mr or ''}. {c.description}" for c in categories])
+    protos = _prototype_vectors(embeddings.provider_name(),
+                                tuple(f"{c.name_en}. {c.name_hi or ''} {c.name_mr or ''}. {c.description}" for c in categories))
     sem = {c.code: embeddings.cosine(vec, p) for c, p in zip(categories, protos)}
     max_kw = max(kw.values()) if kw else 0.0
     combined = {}
@@ -255,9 +265,10 @@ def run_intake(
 
     category_list = "\n".join(f"- {c.code}: {c.name_en}: {c.description}" for c in categories)
     if use_llm:
+        # Phone, e-mail and ID numbers are not needed to classify a complaint, so they never leave the system.
         llm = complete_json(
             SYSTEM_PROMPT,
-            f"Categories:\n{category_list}\n\nLanguage hint: {language}\n\n{wrap_untrusted('complaint', text)}",
+            f"Categories:\n{category_list}\n\nLanguage hint: {language}\n\n{wrap_untrusted('complaint', redact_text(text))}",
             _schema(list(by_code)),
         )
     else:

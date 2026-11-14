@@ -314,7 +314,7 @@ def test_webhook(hid: int, user: User = Depends(require_admin), db: Session = De
                  "department": "WATER", "urgency": "medium", "note": "Test event from GRIEVANCE admin"}})
     db.add(d)
     db.commit()
-    deliver_pending()
+    deliver_pending(only_ids=[d.id])
     db.refresh(d)
     actor, actor_type = actor_of(user)
     audit.record(db, action="webhook.test", actor=actor, actor_type=actor_type, explanation={"webhook": h.name, "status": d.status})

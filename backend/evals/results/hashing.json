@@ -1,0 +1,710 @@
+{
+  "embedder": "hashing",
+  "generated_at": "2026-11-14T17:28:25+00:00",
+  "python": "3.10.11",
+  "seed": 20261111,
+  "intake": {
+    "dataset": "evals/datasets/intake.jsonl",
+    "classifier": "rules (LLM disabled)",
+    "accuracy": {
+      "value": 0.8846,
+      "num": 46,
+      "den": 52
+    },
+    "accuracy_by_language": {
+      "en": {
+        "value": 0.8824,
+        "num": 15,
+        "den": 17
+      },
+      "en-mixed": {
+        "value": 1.0,
+        "num": 1,
+        "den": 1
+      },
+      "hi": {
+        "value": 0.8667,
+        "num": 13,
+        "den": 15
+      },
+      "hi-latn": {
+        "value": 0.3333,
+        "num": 1,
+        "den": 3
+      },
+      "mr": {
+        "value": 1.0,
+        "num": 15,
+        "den": 15
+      },
+      "mr-en": {
+        "value": 1.0,
+        "num": 1,
+        "den": 1
+      }
+    },
+    "language_detection_accuracy": {
+      "value": 0.8846,
+      "num": 46,
+      "den": 52
+    },
+    "sensitive_routed_to_human_review": {
+      "value": 1.0,
+      "num": 7,
+      "den": 7
+    },
+    "non_sensitive_sent_to_review": {
+      "value": 0.2444,
+      "num": 11,
+      "den": 45
+    },
+    "errors": [
+      {
+        "id": "in-006",
+        "lang": "hi",
+        "expected": "WATER_CONTAMINATION",
+        "predicted": "WATER_SUPPLY",
+        "confidence": 0.713,
+        "correct": false,
+        "language_detected": "hi",
+        "human_review": false
+      },
+      {
+        "id": "in-021",
+        "lang": "hi-latn",
+        "expected": "GARBAGE",
+        "predicted": "GENERAL",
+        "confidence": 0.35,
+        "correct": false,
+        "language_detected": "en",
+        "human_review": true
+      },
+      {
+        "id": "in-032",
+        "lang": "hi",
+        "expected": "STRAY_ANIMALS",
+        "predicted": "GENERAL",
+        "confidence": 0.35,
+        "correct": false,
+        "language_detected": "hi",
+        "human_review": true
+      },
+      {
+        "id": "in-037",
+        "lang": "en",
+        "expected": "ENCROACHMENT",
+        "predicted": "GENERAL",
+        "confidence": 0.35,
+        "correct": false,
+        "language_detected": "en",
+        "human_review": true
+      },
+      {
+        "id": "in-046",
+        "lang": "hi-latn",
+        "expected": "BRIBERY",
+        "predicted": "GENERAL",
+        "confidence": 0.35,
+        "correct": false,
+        "language_detected": "en",
+        "human_review": true
+      },
+      {
+        "id": "in-052",
+        "lang": "en",
+        "expected": "POTHOLE",
+        "predicted": "GENERAL",
+        "confidence": 0.35,
+        "correct": false,
+        "language_detected": "en",
+        "human_review": true
+      }
+    ],
+    "language_errors": [
+      {
+        "id": "in-004",
+        "lang": "hi-latn",
+        "detected": "en"
+      },
+      {
+        "id": "in-011",
+        "lang": "mr-en",
+        "detected": "en"
+      },
+      {
+        "id": "in-021",
+        "lang": "hi-latn",
+        "detected": "en"
+      },
+      {
+        "id": "in-033",
+        "lang": "mr",
+        "detected": "hi"
+      },
+      {
+        "id": "in-045",
+        "lang": "mr",
+        "detected": "hi"
+      },
+      {
+        "id": "in-046",
+        "lang": "hi-latn",
+        "detected": "en"
+      }
+    ]
+  },
+  "injection": {
+    "dataset": "evals/datasets/injection.jsonl",
+    "detector": "INJECTION_PATTERNS (regex)",
+    "tp": 9,
+    "fp": 0,
+    "fn": 4,
+    "tn": 10,
+    "precision": 1.0,
+    "recall": 0.6923,
+    "f1": 0.8182,
+    "false_positive_rate": 0.0,
+    "false_negative_rate": 0.3077,
+    "recall_by_language": {
+      "en": {
+        "value": 0.5714,
+        "num": 4,
+        "den": 7
+      },
+      "hi": {
+        "value": 1.0,
+        "num": 2,
+        "den": 2
+      },
+      "hi-latn": {
+        "value": 1.0,
+        "num": 2,
+        "den": 2
+      },
+      "mr": {
+        "value": 0.5,
+        "num": 1,
+        "den": 2
+      }
+    },
+    "missed": [
+      "inj-010",
+      "inj-011",
+      "inj-012",
+      "inj-013"
+    ],
+    "false_alarms": []
+  },
+  "duplicates": {
+    "dataset": "evals/datasets/duplicates.jsonl",
+    "embedding_model": "hashing-ngram-384",
+    "reports": 31,
+    "incidents": 15,
+    "pairs_compared": 72,
+    "positive_pairs": 27,
+    "configured_threshold": 0.62,
+    "min_semantic": 0.25,
+    "at_configured_threshold": {
+      "tp": 4,
+      "fp": 1,
+      "fn": 23,
+      "tn": 44,
+      "precision": 0.8,
+      "recall": 0.1481,
+      "f1": 0.25,
+      "false_positive_rate": 0.0222,
+      "false_negative_rate": 0.8519
+    },
+    "recall_same_language_pairs": {
+      "value": 1.0,
+      "num": 4,
+      "den": 4
+    },
+    "recall_cross_language_pairs": {
+      "value": 0.0,
+      "num": 0,
+      "den": 23
+    },
+    "threshold_sweep_diagnostic_only": [
+      {
+        "threshold": 0.5,
+        "precision": 0.5455,
+        "recall": 0.2222,
+        "f1": 0.3158
+      },
+      {
+        "threshold": 0.55,
+        "precision": 0.6667,
+        "recall": 0.2222,
+        "f1": 0.3333
+      },
+      {
+        "threshold": 0.6,
+        "precision": 0.8333,
+        "recall": 0.1852,
+        "f1": 0.303
+      },
+      {
+        "threshold": 0.65,
+        "precision": 0.8,
+        "recall": 0.1481,
+        "f1": 0.25
+      },
+      {
+        "threshold": 0.7,
+        "precision": 1.0,
+        "recall": 0.0741,
+        "f1": 0.1379
+      },
+      {
+        "threshold": 0.75,
+        "precision": 1.0,
+        "recall": 0.037,
+        "f1": 0.0714
+      },
+      {
+        "threshold": 0.78,
+        "precision": 1.0,
+        "recall": 0.037,
+        "f1": 0.0714
+      },
+      {
+        "threshold": 0.8,
+        "precision": 1.0,
+        "recall": 0.037,
+        "f1": 0.0714
+      },
+      {
+        "threshold": 0.85,
+        "precision": null,
+        "recall": 0.0,
+        "f1": null
+      }
+    ],
+    "false_positives": [
+      {
+        "a": "d01",
+        "b": "d22",
+        "score": 0.6984,
+        "semantic": 0.816
+      }
+    ],
+    "false_negatives": [
+      {
+        "a": "d01",
+        "b": "d02",
+        "score": 0.4345,
+        "semantic": 0.0
+      },
+      {
+        "a": "d01",
+        "b": "d03",
+        "score": 0.4386,
+        "semantic": 0.0
+      },
+      {
+        "a": "d01",
+        "b": "d04",
+        "score": 0.5758,
+        "semantic": 0.257
+      },
+      {
+        "a": "d02",
+        "b": "d03",
+        "score": 0.5553,
+        "semantic": 0.236
+      },
+      {
+        "a": "d02",
+        "b": "d04",
+        "score": 0.4395,
+        "semantic": 0.0
+      },
+      {
+        "a": "d02",
+        "b": "d28",
+        "score": 0.4345,
+        "semantic": 0.0
+      },
+      {
+        "a": "d03",
+        "b": "d04",
+        "score": 0.4315,
+        "semantic": 0.0
+      },
+      {
+        "a": "d03",
+        "b": "d28",
+        "score": 0.4464,
+        "semantic": 0.012
+      },
+      {
+        "a": "d04",
+        "b": "d28",
+        "score": 0.54,
+        "semantic": 0.19
+      },
+      {
+        "a": "d06",
+        "b": "d07",
+        "score": 0.4403,
+        "semantic": 0.0
+      },
+      {
+        "a": "d06",
+        "b": "d08",
+        "score": 0.451,
+        "semantic": 0.019
+      },
+      {
+        "a": "d07",
+        "b": "d08",
+        "score": 0.5482,
+        "semantic": 0.204
+      },
+      {
+        "a": "d07",
+        "b": "d29",
+        "score": 0.4689,
+        "semantic": 0.046
+      },
+      {
+        "a": "d08",
+        "b": "d29",
+        "score": 0.4487,
+        "semantic": 0.012
+      },
+      {
+        "a": "d10",
+        "b": "d11",
+        "score": 0.4421,
+        "semantic": 0.0
+      },
+      {
+        "a": "d13",
+        "b": "d14",
+        "score": 0.4662,
+        "semantic": 0.04
+      },
+      {
+        "a": "d13",
+        "b": "d30",
+        "score": 0.4493,
+        "semantic": 0.005
+      },
+      {
+        "a": "d15",
+        "b": "d16",
+        "score": 0.4401,
+        "semantic": 0.0
+      },
+      {
+        "a": "d15",
+        "b": "d31",
+        "score": 0.4846,
+        "semantic": 0.077
+      },
+      {
+        "a": "d17",
+        "b": "d18",
+        "score": 0.6114,
+        "semantic": 0.32
+      },
+      {
+        "a": "d19",
+        "b": "d20",
+        "score": 0.4416,
+        "semantic": 0.0
+      },
+      {
+        "a": "d23",
+        "b": "d24",
+        "score": 0.4373,
+        "semantic": 0.0
+      },
+      {
+        "a": "d25",
+        "b": "d26",
+        "score": 0.4511,
+        "semantic": 0.015
+      }
+    ],
+    "note": "Thresholds were set before this dataset existed; the sweep is diagnostic and was not used to tune them."
+  },
+  "rag": {
+    "dataset": "queries: evals/datasets/intake.jsonl; corpus: synthetic grievance_history.csv (resolved cases)",
+    "embedding_model": "hashing-ngram-384",
+    "k": 5,
+    "relevance_definition": "a retrieved precedent is relevant when it has the query's gold category (proxy; no human relevance judgements)",
+    "modes": {
+      "unfiltered": "vector search over all resolved cases (measures the embedder)",
+      "production": "category -> department -> all widening, using the rules classifier's predicted category"
+    },
+    "unfiltered": {
+      "overall": {
+        "queries": 52,
+        "precision_at_5": 0.7654,
+        "hit_at_1": 0.8269,
+        "mrr": 0.8526,
+        "share_of_results_in_other_language": 0.0731
+      },
+      "by_language": {
+        "en": {
+          "queries": 17,
+          "precision_at_5": 0.8235,
+          "hit_at_1": 0.9412,
+          "mrr": 0.9412,
+          "share_of_results_in_other_language": 0.0
+        },
+        "en-mixed": {
+          "queries": 1,
+          "precision_at_5": 0.0,
+          "hit_at_1": 0.0,
+          "mrr": 0.0,
+          "share_of_results_in_other_language": 0.0
+        },
+        "hi": {
+          "queries": 15,
+          "precision_at_5": 0.7467,
+          "hit_at_1": 0.8,
+          "mrr": 0.8222,
+          "share_of_results_in_other_language": 0.0
+        },
+        "hi-latn": {
+          "queries": 3,
+          "precision_at_5": 0.6,
+          "hit_at_1": 0.6667,
+          "mrr": 0.8333,
+          "share_of_results_in_other_language": 0.9333
+        },
+        "mr": {
+          "queries": 15,
+          "precision_at_5": 0.7867,
+          "hit_at_1": 0.8,
+          "mrr": 0.8333,
+          "share_of_results_in_other_language": 0.0
+        },
+        "mr-en": {
+          "queries": 1,
+          "precision_at_5": 1.0,
+          "hit_at_1": 1.0,
+          "mrr": 1.0,
+          "share_of_results_in_other_language": 1.0
+        }
+      },
+      "queries_with_no_results": 0
+    },
+    "production": {
+      "overall": {
+        "queries": 52,
+        "precision_at_5": 0.8538,
+        "hit_at_1": 0.9038,
+        "mrr": 0.9199,
+        "share_of_results_in_other_language": 0.0808
+      },
+      "by_language": {
+        "en": {
+          "queries": 17,
+          "precision_at_5": 0.8706,
+          "hit_at_1": 0.8824,
+          "mrr": 0.9118,
+          "share_of_results_in_other_language": 0.0235
+        },
+        "en-mixed": {
+          "queries": 1,
+          "precision_at_5": 1.0,
+          "hit_at_1": 1.0,
+          "mrr": 1.0,
+          "share_of_results_in_other_language": 0.0
+        },
+        "hi": {
+          "queries": 15,
+          "precision_at_5": 0.8267,
+          "hit_at_1": 0.9333,
+          "mrr": 0.9333,
+          "share_of_results_in_other_language": 0.0
+        },
+        "hi-latn": {
+          "queries": 3,
+          "precision_at_5": 0.8667,
+          "hit_at_1": 0.6667,
+          "mrr": 0.7778,
+          "share_of_results_in_other_language": 0.9333
+        },
+        "mr": {
+          "queries": 15,
+          "precision_at_5": 0.84,
+          "hit_at_1": 0.9333,
+          "mrr": 0.9333,
+          "share_of_results_in_other_language": 0.0
+        },
+        "mr-en": {
+          "queries": 1,
+          "precision_at_5": 1.0,
+          "hit_at_1": 1.0,
+          "mrr": 1.0,
+          "share_of_results_in_other_language": 1.0
+        }
+      },
+      "queries_with_no_results": 0
+    }
+  },
+  "sla": {
+    "dataset": "backend/data/synthetic/grievance_history.csv (SYNTHETIC, generated with seed 20261111)",
+    "method": "chronological rolling-origin: first 70% of cases by creation time are history only; each of the last 30% is predicted from cases resolved before it was filed",
+    "rows_total": 720,
+    "rows_excluded_right_censored": 1,
+    "test_cases": 216,
+    "test_period_start": "2026-08-23T13:41:12+00:00",
+    "breach_rate_in_test": {
+      "value": 0.287,
+      "num": 62,
+      "den": 216
+    },
+    "leakage_violations": 0,
+    "load_factor": "1.0 (historical department load is not recorded)",
+    "variants": {
+      "production (category pool, urgency factor)": {
+        "ece_10_bins": 0.0268,
+        "brier": 0.1903,
+        "log_loss": 0.5617,
+        "auc": 0.6487,
+        "reliability": [
+          {
+            "bin": "[0.0,0.1)",
+            "count": 37,
+            "mean_predicted": 0.074,
+            "observed_rate": 0.081
+          },
+          {
+            "bin": "[0.1,0.2)",
+            "count": 13,
+            "mean_predicted": 0.164,
+            "observed_rate": 0.308
+          },
+          {
+            "bin": "[0.2,0.3)",
+            "count": 102,
+            "mean_predicted": 0.23,
+            "observed_rate": 0.255
+          },
+          {
+            "bin": "[0.3,0.4)",
+            "count": 2,
+            "mean_predicted": 0.394,
+            "observed_rate": 0.5
+          },
+          {
+            "bin": "[0.4,0.5)",
+            "count": 61,
+            "mean_predicted": 0.465,
+            "observed_rate": 0.459
+          },
+          {
+            "bin": "[0.5,0.6)",
+            "count": 1,
+            "mean_predicted": 0.5,
+            "observed_rate": 0.0
+          }
+        ],
+        "resolution_time_mae_hours": 22.48,
+        "alert_at_0_6": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 62,
+          "tn": 154,
+          "precision": null,
+          "recall": 0.0,
+          "f1": null,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0
+        }
+      },
+      "without urgency factor": {
+        "ece_10_bins": 0.0339,
+        "brier": 0.1918,
+        "log_loss": 0.565,
+        "auc": 0.6378,
+        "reliability": [
+          {
+            "bin": "[0.0,0.1)",
+            "count": 30,
+            "mean_predicted": 0.076,
+            "observed_rate": 0.067
+          },
+          {
+            "bin": "[0.1,0.2)",
+            "count": 17,
+            "mean_predicted": 0.159,
+            "observed_rate": 0.235
+          },
+          {
+            "bin": "[0.2,0.3)",
+            "count": 97,
+            "mean_predicted": 0.233,
+            "observed_rate": 0.268
+          },
+          {
+            "bin": "[0.3,0.4)",
+            "count": 10,
+            "mean_predicted": 0.343,
+            "observed_rate": 0.2
+          },
+          {
+            "bin": "[0.4,0.5)",
+            "count": 61,
+            "mean_predicted": 0.465,
+            "observed_rate": 0.459
+          },
+          {
+            "bin": "[0.5,0.6)",
+            "count": 1,
+            "mean_predicted": 0.5,
+            "observed_rate": 0.0
+          }
+        ],
+        "resolution_time_mae_hours": 22.3,
+        "alert_at_0_6": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 62,
+          "tn": 154,
+          "precision": null,
+          "recall": 0.0,
+          "f1": null,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0
+        }
+      },
+      "baseline: historical base rate": {
+        "ece_10_bins": 0.0424,
+        "brier": 0.2064,
+        "log_loss": 0.604,
+        "auc": 0.5357,
+        "reliability": [
+          {
+            "bin": "[0.2,0.3)",
+            "count": 216,
+            "mean_predicted": 0.245,
+            "observed_rate": 0.287
+          }
+        ]
+      },
+      "baseline: constant 0.3 (cold-start default)": {
+        "ece_10_bins": 0.013,
+        "brier": 0.2048,
+        "log_loss": 0.5999,
+        "auc": 0.5,
+        "reliability": [
+          {
+            "bin": "[0.3,0.4)",
+            "count": 216,
+            "mean_predicted": 0.3,
+            "observed_rate": 0.287
+          }
+        ]
+      }
+    },
+    "caveat": "The synthetic generator draws resolution times from a per-category log-normal distribution that does not depend on time, urgency or load. Good numbers here show the estimator recovers that distribution; they are not evidence of real-world accuracy."
+  }
+}

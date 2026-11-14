@@ -60,22 +60,38 @@ def department_load(db: Session, department_id: int | None) -> dict[str, float]:
     return {"open": int(open_count), "capacity": int(capacity), "ratio": round(open_count / max(1, capacity), 3)}
 
 
+MODEL_VERSION = "empirical-quantile-v1"
+COLD_START_MIN_SAMPLES = 8
+URGENCY_FACTOR = {"critical": 0.7, "high": 0.85}
+
+
+def estimate(hours: list[float], sla_hours: float, *, load_factor: float = 1.0, urgency: str = "medium") -> tuple[float, float]:
+    """(predicted resolution hours, breach probability) from comparable past resolution times.
+
+    This is an empirical estimator, not a trained model: the breach probability is the share of
+    comparable past cases that, scaled by current load and urgency, took longer than the SLA. It is
+    shared by the live agent and the chronological backtest in `app.evals`, so the reported metrics
+    measure exactly this code."""
+    if not hours:
+        return float(sla_hours) * 0.8, 0.3
+    arr = np.asarray(hours) * load_factor * URGENCY_FACTOR.get(urgency, 1.0)
+    return float(np.median(arr)), float(np.mean(arr > sla_hours))
+
+
 def predict(db: Session, g: Grievance, sla_hours: int) -> dict[str, Any]:
     hours = _resolution_hours(db, category_id=g.category_id)
     basis = "category"
-    if len(hours) < 8:
+    if len(hours) < COLD_START_MIN_SAMPLES:
         hours = _resolution_hours(db, department_id=g.department_id)
         basis = "department"
     load = department_load(db, g.department_id)
     load_factor = 1.0 + max(0.0, load["ratio"] - 0.6)  # backlog above 60% capacity slows resolution
-    urgency_factor = {"critical": 0.7, "high": 0.85}.get(g.urgency, 1.0)
-    if hours:
-        arr = np.asarray(hours) * load_factor * urgency_factor
-        predicted = float(np.median(arr))
-        prob = float(np.mean(arr > sla_hours))
-    else:
-        predicted, prob, basis = float(sla_hours) * 0.8, 0.3, "default"
+    predicted, prob = estimate(hours, sla_hours, load_factor=load_factor, urgency=g.urgency)
+    if not hours:
+        basis = "default"
     return {
+        "model_version": MODEL_VERSION,
+        "predicted_at": utcnow().isoformat(),
         "predicted_resolution_hours": round(predicted, 1),
         "breach_probability": round(prob, 3),
         "basis": basis,

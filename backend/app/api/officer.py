@@ -13,7 +13,7 @@ from app.core.errors import DomainError, Forbidden, InvalidTransition, NotFound
 from app.core.time import as_aware, utcnow
 from app.db.session import get_db
 from app.models import Assignment, DuplicateGroupMember, Grievance, GrievanceCategory, Officer, OfficerNote, SlaRecord, User
-from app.models.enums import OPEN_STATUSES, GrievanceStatus
+from app.models.enums import OPEN_STATUSES, GrievanceStatus, Role
 from app.schemas.api import EscalateIn, NoteIn, ReassignIn, ReviewDecisionIn, StatusUpdateIn, UnlinkIn
 from app.services import audit, notifications
 from app.services.audit import actor_of
@@ -146,7 +146,7 @@ def review(public_id: str, body: ReviewDecisionIn, user: User = Depends(require_
         officer, why = actions.pick_officer(db, g, sensitive=g.is_sensitive)
         if officer is None:
             raise DomainError(f"No eligible officer available ({why.get('reason')}). Choose an officer explicitly.")
-    g.assigned_officer_id = officer.id
+    g.assigned_officer = officer  # set the relationship, not just the id, so the response is not stale
     g.needs_human_review = False
     g.reviewed_by_id, g.reviewed_at = user.id, utcnow()
     db.add(Assignment(grievance_id=g.id, department_id=g.department_id, officer_id=officer.id, actor=actor,
@@ -182,6 +182,10 @@ def _log_human_review(db: Session, g: Grievance, user: User, note: str, before: 
 @router.post("/grievances/{public_id}/status")
 def update_status(public_id: str, body: StatusUpdateIn, user: User = Depends(require_officer), db: Session = Depends(get_db)):
     g = get_grievance_for(db, user, public_id)
+    # Officers may see their department's cases, but only the assigned officer changes a case's status
+    # (department and system administrators keep that authority for every case they can see).
+    if user.role == Role.OFFICER.value and (user.officer is None or g.assigned_officer_id != user.officer.id):
+        raise Forbidden("Only the assigned officer or a department administrator can change this grievance's status.")
     actor, actor_type = actor_of(user)
     if body.status == "RESOLVED":
         if not (body.resolution_summary and len(body.resolution_summary.strip()) >= 10):
@@ -220,7 +224,7 @@ def reassign(public_id: str, body: ReassignIn, user: User = Depends(require_offi
     for a in db.scalars(select(Assignment).where(Assignment.grievance_id == g.id, Assignment.is_active.is_(True))):
         a.is_active = False
     prev = g.assigned_officer.code if g.assigned_officer else None
-    g.assigned_officer_id = officer.id
+    g.assigned_officer = officer  # set the relationship, not just the id, so the response is not stale
     db.add(Assignment(grievance_id=g.id, department_id=g.department_id, officer_id=officer.id, actor=actor, actor_type=actor_type,
                       reason=body.note))
     audit.record(db, action="assignment.reassigned", actor=actor, actor_type=actor_type, grievance=g,

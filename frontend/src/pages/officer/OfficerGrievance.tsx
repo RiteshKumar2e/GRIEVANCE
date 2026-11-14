@@ -79,6 +79,8 @@ export default function OfficerGrievance() {
   const g = q.data!;
   const pol = g.policy_explanation;
   const open = !["RESOLVED", "CLOSED"].includes(g.status);
+  // Mirrors the API: an officer changes status only on cases assigned to them; administrators on any visible case.
+  const canChangeStatus = user?.role !== "officer" || (!!user?.officer_code && g.assigned_officer?.code === user.officer_code);
   const sensitiveBlocked = g.is_sensitive && user?.role === "officer" && !g.eligible_officers?.some((o) => o.handles_sensitive && o.code === user.officer_code);
 
   const actionCfg: Record<Exclude<Action, null>, { title: string; submit: string; valid: boolean; body: ReactNode }> = {
@@ -160,9 +162,9 @@ export default function OfficerGrievance() {
                 Review and assign
               </Button>
             )}
-            {["ASSIGNED", "REOPENED"].includes(g.status) && <Button onClick={() => setAction("progress")}>Start work</Button>}
-            {["ASSIGNED", "IN_PROGRESS", "REOPENED"].includes(g.status) && <Button variant="accent" onClick={() => setAction("resolve")}>Resolve</Button>}
-            {g.status === "RESOLVED" && <Button variant="secondary" onClick={() => setAction("close")}>Close</Button>}
+            {canChangeStatus && ["ASSIGNED", "REOPENED"].includes(g.status) && <Button onClick={() => setAction("progress")}>Start work</Button>}
+            {canChangeStatus && ["ASSIGNED", "IN_PROGRESS", "REOPENED"].includes(g.status) && <Button variant="accent" onClick={() => setAction("resolve")}>Resolve</Button>}
+            {canChangeStatus && g.status === "RESOLVED" && <Button variant="secondary" onClick={() => setAction("close")}>Close</Button>}
             {["ASSIGNED", "IN_PROGRESS", "REOPENED"].includes(g.status) && <Button variant="secondary" onClick={() => setAction("reassign")}>Reassign</Button>}
             {open && <Button variant="secondary" onClick={() => setAction("escalate")}>Escalate</Button>}
           </>

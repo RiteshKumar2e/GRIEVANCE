@@ -93,7 +93,7 @@ def assign(
         notifications.notify_admins(db, g, "review_required", f"Unassigned: {g.public_id}", "No officer had capacity for this grievance.")
         return {"actions": ["route_to_human_review"], "status": g.status, "officer": None}
 
-    g.assigned_officer_id = officer.id
+    g.assigned_officer = officer  # set the relationship, not just the id, so the response is not stale
     db.add(Assignment(grievance_id=g.id, department_id=g.department_id, officer_id=officer.id, actor=AI_ACTOR,
                       actor_type=ActorType.AI.value, reason=f"Least-loaded officer (ward match: {why['ward_match']})"))
     transition(db, g, GrievanceStatus.ASSIGNED, actor=AI_ACTOR, actor_type=ActorType.AI.value,

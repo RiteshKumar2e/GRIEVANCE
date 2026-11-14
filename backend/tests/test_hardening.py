@@ -129,3 +129,114 @@ def test_ordinary_requests_are_not_flagged_as_injection(text):
     from app.agents.intake import INJECTION_PATTERNS
 
     assert INJECTION_PATTERNS.search(text) is None
+
+
+# ------------------------------------------------------------------ status changes: assigned officer only
+def test_unassigned_officer_cannot_resolve_colleagues_case(client, citizen):
+    from tests.conftest import login
+
+    g = submit(client, citizen, POTHOLE)
+    assert g["status"] == "ASSIGNED"
+    assigned = g["assigned_officer"]["code"]
+    other_email = next(e for code, e in [("OFF-ROADS-01", "officer.roads@example.org"),
+                                         ("OFF-ROADS-02", "off-roads-02@example.org"),
+                                         ("OFF-ROADS-03", "off-roads-03@example.org")] if code != assigned)
+    colleague = login(client, other_email)
+    url = f"/api/v1/officer/grievances/{g['public_id']}/status"
+    # The colleague can see the department case...
+    assert client.get(f"/api/v1/officer/grievances/{g['public_id']}", headers=colleague).status_code == 200
+    # ...but cannot resolve it.
+    r = client.post(url, headers=colleague, json={"status": "RESOLVED", "resolution_summary": "Closed by someone else."})
+    assert r.status_code == 403
+    # The department administrator can.
+    dept_admin = login(client, "deptadmin.roads@example.org")
+    assert client.post(url, headers=dept_admin, json={"status": "IN_PROGRESS"}).status_code == 200
+
+
+# ------------------------------------------------------------------ webhook replay protection
+def test_webhook_signature_rejects_replay_and_tampering():
+    from app.services.webhooks import sign, verify
+
+    body = b'{"event":"grievance.assigned","data":{"grievance_id":"GRV-1"}}'
+    ts = 1_800_000_000
+    sig = f"sha256={sign(body, ts)}"
+    assert verify(body, sig, str(ts), now=ts + 10) == (True, "ok")
+    assert verify(body, sig, str(ts), now=ts + 301)[0] is False           # replayed after 5 minutes
+    assert verify(body + b" ", sig, str(ts), now=ts)[0] is False          # body tampered
+    assert verify(body, sig, str(ts + 1), now=ts)[0] is False             # timestamp tampered
+    assert verify(body, sig, "", now=ts)[0] is False                      # timestamp missing
+
+
+def test_delivery_sends_verifiable_headers(db, monkeypatch):
+    import httpx
+
+    from app.services import webhooks
+
+    seen = {}
+
+    def fake_post(url, content=None, timeout=None, follow_redirects=None, headers=None):
+        seen.update(headers=headers, body=content, follow=follow_redirects)
+        return httpx.Response(200, request=httpx.Request("POST", url))
+
+    monkeypatch.setattr(webhooks.httpx, "post", fake_post)
+    hook = Webhook(name="pub", url="https://93.184.216.34/hook", events=[], is_active=True)
+    db.add(hook)
+    db.flush()
+    d = WebhookDelivery(webhook_id=hook.id, event="webhook.test", payload={"event": "webhook.test", "data": {}})
+    db.add(d)
+    db.commit()
+    webhooks.deliver_pending()
+    h = seen["headers"]
+    assert seen["follow"] is False
+    assert h["X-Grievance-Delivery"] == str(d.id)
+    assert webhooks.verify(seen["body"], h["X-Grievance-Signature"], h["X-Grievance-Timestamp"])[0] is True
+    hook.is_active = False
+    db.commit()
+
+
+# ------------------------------------------------------------------ PII minimisation towards external LLMs
+def test_complaint_pii_is_redacted_before_reaching_the_llm(db, monkeypatch):
+    from app.agents import intake
+    from app.llm.client import LLMResult
+
+    sent = {}
+
+    def fake_complete_json(system, user, schema):
+        sent["prompt"] = user
+        return LLMResult(data=None, provider="rules", model="rules-v1", attempts=[])
+
+    monkeypatch.setattr(intake, "complete_json", fake_complete_json)
+    intake.run_intake(db, "No water in Kasba Peth. Call me on 9876543210 or ravi@example.com, Aadhaar 1234 5678 9012.")
+    assert "9876543210" not in sent["prompt"]
+    assert "ravi@example.com" not in sent["prompt"]
+    assert "1234 5678 9012" not in sent["prompt"]
+    assert "[phone]" in sent["prompt"] and "Kasba Peth" in sent["prompt"]
+
+
+# ------------------------------------------------------------------ previously untested endpoints
+def test_transcribe_validates_input_and_reports_unavailable_stt(client, citizen):
+    url = "/api/v1/citizen/intake/transcribe"
+    bad_type = client.post(url, headers=citizen, files={"audio": ("a.txt", b"x" * 2000, "text/plain")})
+    assert bad_type.status_code == 415
+    too_short = client.post(url, headers=citizen, files={"audio": ("a.webm", b"x" * 10, "audio/webm")})
+    assert too_short.status_code == 422
+    # Tests run with STT_PROVIDER=disabled: the citizen gets a clear 503 and can type instead.
+    unavailable = client.post(url, headers=citizen, files={"audio": ("a.webm", b"x" * 4000, "audio/webm")})
+    assert unavailable.status_code == 503
+
+
+def test_reassign_within_department_is_audited(client, citizen, db):
+    from tests.conftest import login
+
+    g = submit(client, citizen, POTHOLE)
+    current = g["assigned_officer"]["code"]
+    target = next(c for c in ("OFF-ROADS-01", "OFF-ROADS-02", "OFF-ROADS-03") if c != current)
+    dept_admin = login(client, "deptadmin.roads@example.org")
+    url = f"/api/v1/officer/grievances/{g['public_id']}/reassign"
+    r = client.post(url, headers=dept_admin, json={"officer_code": target, "note": "Balancing workload"})
+    assert r.status_code == 200 and r.json()["assigned_officer"]["code"] == target
+    # An officer from another department cannot be chosen.
+    assert client.post(url, headers=dept_admin, json={"officer_code": "OFF-WATER-01", "note": "wrong dept"}).status_code == 400
+    events = db.scalars(select(AuditEvent).where(AuditEvent.grievance_public_id == g["public_id"],
+                                                 AuditEvent.action == "assignment.reassigned")).all()
+    assert len(events) == 1 and events[0].explanation["to"] == target

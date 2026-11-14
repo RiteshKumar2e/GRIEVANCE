@@ -3,6 +3,7 @@ Langfuse export, n8n/Zapier-compatible webhooks, spam protection, analytics and 
 import hashlib
 import hmac
 import json
+import time
 
 import httpx
 from sqlalchemy import select
@@ -131,10 +132,14 @@ def test_langfuse_url_never_fabricated_when_auth_fails(monkeypatch, db):
 
 def test_mock_receiver_verifies_signatures(client, admin):
     body = json.dumps({"event": "grievance.created", "data": {"grievance_id": "GRV-X"}}).encode()
-    good = "sha256=" + hmac.new(get_settings().webhook_signing_secret.encode(), body, hashlib.sha256).hexdigest()
-    r = client.post("/api/v1/mock/webhook-receiver", content=body, headers={"X-Grievance-Signature": good, "X-Grievance-Event": "grievance.created"})
+    ts = int(time.time())
+    msg = f"{ts}.".encode() + body
+    good = "sha256=" + hmac.new(get_settings().webhook_signing_secret.encode(), msg, hashlib.sha256).hexdigest()
+    r = client.post("/api/v1/mock/webhook-receiver", content=body,
+                    headers={"X-Grievance-Signature": good, "X-Grievance-Timestamp": str(ts), "X-Grievance-Event": "grievance.created"})
     assert r.json()["signature_valid"] is True
-    r = client.post("/api/v1/mock/webhook-receiver", content=body, headers={"X-Grievance-Signature": "sha256=forged"})
+    r = client.post("/api/v1/mock/webhook-receiver", content=body,
+                    headers={"X-Grievance-Signature": "sha256=forged", "X-Grievance-Timestamp": str(ts)})
     assert r.json()["signature_valid"] is False
     got = client.get("/api/v1/mock/webhook-receiver", headers=admin).json()
     assert got["items"][0]["signature_valid"] is False and got["items"][1]["signature_valid"] is True

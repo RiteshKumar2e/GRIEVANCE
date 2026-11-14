@@ -1,0 +1,52 @@
+{"id": "in-001", "lang": "en", "text": "There has been no water in our taps in Kasba Peth for three days. The whole lane depends on tankers now.", "category": "WATER_SUPPLY", "sensitive": false}
+{"id": "in-002", "lang": "hi", "text": "शिवाजी नगर में पिछले चार दिनों से नल में पानी नहीं आ रहा है, बहुत परेशानी हो रही है।", "category": "WATER_SUPPLY", "sensitive": false}
+{"id": "in-003", "lang": "mr", "text": "गणेश पेठ भागात गेल्या दोन दिवसांपासून पाणीपुरवठा बंद आहे, नळ कोरडे आहेत.", "category": "WATER_SUPPLY", "sensitive": false}
+{"id": "in-004", "lang": "hi-latn", "text": "Sai Colony mein 3 din se paani nahi aa raha, tap bilkul sukha hai.", "category": "WATER_SUPPLY", "sensitive": false}
+{"id": "in-005", "lang": "en", "text": "The drinking water coming to our building in Indira Nagar is yellow and smells foul. Children have fallen sick.", "category": "WATER_CONTAMINATION", "sensitive": false}
+{"id": "in-006", "lang": "hi", "text": "मार्केट यार्ड में नल से गंदा और बदबूदार पानी आ रहा है, पीने लायक नहीं है।", "category": "WATER_CONTAMINATION", "sensitive": false}
+{"id": "in-007", "lang": "mr", "text": "नेहरू कॉलनीत नळाला गढूळ आणि दूषित पाणी येत आहे, मुले आजारी पडली आहेत.", "category": "WATER_CONTAMINATION", "sensitive": false}
+{"id": "in-008", "lang": "en", "text": "Huge potholes on Station Road near the bus depot. Two-wheelers are skidding every day.", "category": "POTHOLE", "sensitive": false}
+{"id": "in-009", "lang": "hi", "text": "लक्ष्मी रोड पर सड़क में बड़े गड्ढे हो गए हैं, रात में दुर्घटना का खतरा है।", "category": "POTHOLE", "sensitive": false}
+{"id": "in-010", "lang": "mr", "text": "अंबेडकर नगरमधील मुख्य रस्त्यावर मोठे खड्डे पडले आहेत, गाड्यांचे नुकसान होत आहे.", "category": "POTHOLE", "sensitive": false}
+{"id": "in-011", "lang": "mr-en", "text": "Market Yard road var khup potholes ahet, bike chalavne kathin zhale aahe.", "category": "POTHOLE", "sensitive": false}
+{"id": "in-012", "lang": "en", "text": "Three street lights on Gandhi Chowk lane have not worked for a week and the street is completely dark at night.", "category": "STREETLIGHT", "sensitive": false}
+{"id": "in-013", "lang": "hi", "text": "गांधी चौक की गली में स्ट्रीट लाइट एक हफ्ते से खराब है, रात को पूरा अंधेरा रहता है।", "category": "STREETLIGHT", "sensitive": false}
+{"id": "in-014", "lang": "mr", "text": "साई कॉलनीत पथदिवे आठवडाभर बंद आहेत, रात्री रस्त्यावर अंधार असतो.", "category": "STREETLIGHT", "sensitive": false}
+{"id": "in-015", "lang": "en", "text": "A live wire is hanging low and sparking near the transformer in MIDC Area. It is very dangerous.", "category": "POWER_OUTAGE", "sensitive": false}
+{"id": "in-016", "lang": "hi", "text": "MIDC एरिया में कल रात से बिजली नहीं है, ट्रांसफॉर्मर खराब हो गया है।", "category": "POWER_OUTAGE", "sensitive": false}
+{"id": "in-017", "lang": "mr", "text": "शिवाजी नगरमध्ये सकाळपासून वीज खंडित आहे, ट्रान्सफॉर्मरमधून ठिणग्या येत आहेत.", "category": "POWER_OUTAGE", "sensitive": false}
+{"id": "in-018", "lang": "en", "text": "Garbage has not been collected in Laxmi Road for five days. The bins are overflowing and it stinks.", "category": "GARBAGE", "sensitive": false}
+{"id": "in-019", "lang": "hi", "text": "कसबा पेठ में पांच दिन से कचरा नहीं उठाया गया है, कूड़ेदान भर गए हैं।", "category": "GARBAGE", "sensitive": false}
+{"id": "in-020", "lang": "mr", "text": "इंदिरा नगरमध्ये चार दिवसांपासून कचरा उचलला नाही, सगळीकडे दुर्गंधी पसरली आहे.", "category": "GARBAGE", "sensitive": false}
+{"id": "in-021", "lang": "hi-latn", "text": "Ganesh Peth mein kachra 4 din se nahi uthaya gaya, bahut badboo aa rahi hai.", "category": "GARBAGE", "sensitive": false}
+{"id": "in-022", "lang": "en", "text": "After yesterday's rain the storm drain in Nehru Colony is blocked and the whole lane is waterlogged.", "category": "DRAINAGE", "sensitive": false}
+{"id": "in-023", "lang": "hi", "text": "बारिश के बाद नेहरू कॉलोनी की नाली जाम हो गई है, गली में पानी भर गया है।", "category": "DRAINAGE", "sensitive": false}
+{"id": "in-024", "lang": "mr", "text": "पावसानंतर स्टेशन रोडवरील गटार तुंबले आहे आणि रस्त्यावर पाणी साचले आहे.", "category": "DRAINAGE", "sensitive": false}
+{"id": "in-025", "lang": "en", "text": "Sewage is overflowing from the manhole outside our society in Ganesh Peth and entering the houses.", "category": "SEWAGE", "sensitive": false}
+{"id": "in-026", "lang": "hi", "text": "गणेश पेठ में मैनहोल से सीवर का पानी बह रहा है और घरों में घुस रहा है।", "category": "SEWAGE", "sensitive": false}
+{"id": "in-027", "lang": "mr", "text": "अंबेडकर नगरमध्ये मॅनहोलमधून सांडपाणी रस्त्यावर वाहत आहे.", "category": "SEWAGE", "sensitive": false}
+{"id": "in-028", "lang": "en", "text": "Stagnant water near the park in Sai Colony is breeding mosquitoes. Two dengue cases in our lane already, please arrange fogging.", "category": "MOSQUITO", "sensitive": false}
+{"id": "in-029", "lang": "hi", "text": "साई कॉलोनी में मच्छर बहुत बढ़ गए हैं, दो लोगों को डेंगू हुआ है, फॉगिंग करवाइए।", "category": "MOSQUITO", "sensitive": false}
+{"id": "in-030", "lang": "mr", "text": "इंदिरा नगरमध्ये डासांचा प्रादुर्भाव वाढला आहे, धूरफवारणी करावी.", "category": "MOSQUITO", "sensitive": false}
+{"id": "in-031", "lang": "en", "text": "A pack of stray dogs near Market Yard bit a child this morning. People are scared to walk there.", "category": "STRAY_ANIMALS", "sensitive": false}
+{"id": "in-032", "lang": "hi", "text": "मार्केट यार्ड के पास आवारा कुत्तों ने एक बच्चे को काट लिया, लोग डरे हुए हैं।", "category": "STRAY_ANIMALS", "sensitive": false}
+{"id": "in-033", "lang": "mr", "text": "स्टेशन रोडवर भटकी जनावरे आणि मोकाट गायी रस्त्यात बसतात, वाहतूक अडते.", "category": "STRAY_ANIMALS", "sensitive": false}
+{"id": "in-034", "lang": "en", "text": "My property tax bill shows the wrong built-up area and the amount is double last year's assessment.", "category": "PROPERTY_TAX", "sensitive": false}
+{"id": "in-035", "lang": "hi", "text": "मेरे संपत्ति कर के बिल में गलत क्षेत्रफल लिखा है, टैक्स दोगुना आ गया है।", "category": "PROPERTY_TAX", "sensitive": false}
+{"id": "in-036", "lang": "mr", "text": "माझ्या मालमत्ता कराच्या बिलात चुकीचे क्षेत्रफळ दाखवले आहे, कर दुप्पट आला आहे.", "category": "PROPERTY_TAX", "sensitive": false}
+{"id": "in-037", "lang": "en", "text": "A shopkeeper on Laxmi Road has encroached on the footpath with a permanent shed. Pedestrians have to walk on the road.", "category": "ENCROACHMENT", "sensitive": false}
+{"id": "in-038", "lang": "hi", "text": "लक्ष्मी रोड पर एक दुकानदार ने फुटपाथ पर अतिक्रमण कर लिया है, पैदल चलने की जगह नहीं है।", "category": "ENCROACHMENT", "sensitive": false}
+{"id": "in-039", "lang": "mr", "text": "गांधी चौकात फूटपाथवर अतिक्रमण करून पक्के बांधकाम केले आहे.", "category": "ENCROACHMENT", "sensitive": false}
+{"id": "in-040", "lang": "en", "text": "The route 12 municipal bus has not stopped at the Shivaji Nagar stop for a week. Office-goers are stranded.", "category": "PUBLIC_TRANSPORT", "sensitive": false}
+{"id": "in-041", "lang": "hi", "text": "शिवाजी नगर स्टॉप पर रूट 12 की बस एक हफ्ते से नहीं रुक रही है।", "category": "PUBLIC_TRANSPORT", "sensitive": false}
+{"id": "in-042", "lang": "mr", "text": "शिवाजी नगर थांब्यावर बस आठवडाभर थांबत नाही, प्रवाशांचे हाल होत आहेत.", "category": "PUBLIC_TRANSPORT", "sensitive": false}
+{"id": "in-043", "lang": "en", "text": "The clerk at the ward office demanded two thousand rupees as a bribe to issue my birth certificate.", "category": "BRIBERY", "sensitive": true}
+{"id": "in-044", "lang": "hi", "text": "वार्ड ऑफिस के क्लर्क ने जन्म प्रमाण पत्र देने के लिए रिश्वत मांगी।", "category": "BRIBERY", "sensitive": true}
+{"id": "in-045", "lang": "mr", "text": "वॉर्ड कार्यालयातील लिपिकाने दाखला देण्यासाठी लाच मागितली.", "category": "BRIBERY", "sensitive": true}
+{"id": "in-046", "lang": "hi-latn", "text": "Ward office ka clerk certificate dene ke liye rishwat maang raha hai, 2000 rupaye bola.", "category": "BRIBERY", "sensitive": true}
+{"id": "in-047", "lang": "en", "text": "A group of men harass women near the Ambedkar Nagar bus stop every evening. It is unsafe for girls.", "category": "HARASSMENT", "sensitive": true}
+{"id": "in-048", "lang": "hi", "text": "अंबेडकर नगर बस स्टॉप पर कुछ लड़के रोज़ शाम को महिलाओं को परेशान करते हैं और छेड़छाड़ करते हैं।", "category": "HARASSMENT", "sensitive": true}
+{"id": "in-049", "lang": "mr", "text": "बस थांब्यावर काही मुले रोज संध्याकाळी महिलांची छेड काढतात, मुलींना असुरक्षित वाटते.", "category": "HARASSMENT", "sensitive": true}
+{"id": "in-050", "lang": "en-mixed", "text": "Our lane in Kasba Peth has had no water since Monday and the drain next to it is also blocked, please look at both.", "category": "WATER_SUPPLY", "sensitive": false, "note": "two issues; primary is water supply"}
+{"id": "in-051", "lang": "en", "text": "Something is not right near my house, please look into it soon.", "category": "GENERAL", "sensitive": false, "note": "vague, no location"}
+{"id": "in-052", "lang": "en", "text": "The road is broken.", "category": "POTHOLE", "sensitive": false, "note": "minimal, no location"}

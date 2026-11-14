@@ -6,6 +6,7 @@ import hashlib
 import hmac
 import json
 import logging
+import time
 from typing import Any
 
 import httpx
@@ -52,17 +53,44 @@ def queue_event(db: Session, event: str, payload: dict[str, Any]) -> int:
     return n
 
 
-def sign(body: bytes) -> str:
-    return hmac.new(get_settings().webhook_signing_secret.encode(), body, hashlib.sha256).hexdigest()
+SIGNATURE_TOLERANCE_SECONDS = 300
 
 
-def deliver_pending(limit: int = 50) -> int:
-    """Deliver queued webhooks. Safe to call from a background task."""
+def sign(body: bytes, timestamp: int) -> str:
+    """HMAC-SHA256 over "<unix timestamp>.<raw body>".
+
+    Binding the timestamp into the signature lets receivers reject replays of an old, captured
+    delivery (see `verify`); the X-Grievance-Delivery id lets them drop retried duplicates."""
+    msg = str(timestamp).encode() + b"." + body
+    return hmac.new(get_settings().webhook_signing_secret.encode(), msg, hashlib.sha256).hexdigest()
+
+
+def verify(body: bytes, signature_header: str, timestamp_header: str, *, now: int | None = None) -> tuple[bool, str]:
+    """Receiver-side check, exactly as an n8n/Zapier workflow should implement it."""
+    try:
+        ts = int(timestamp_header)
+    except (TypeError, ValueError):
+        return False, "missing or invalid timestamp"
+    current = int(time.time()) if now is None else now
+    if abs(current - ts) > SIGNATURE_TOLERANCE_SECONDS:
+        return False, "timestamp outside the 5-minute tolerance (possible replay)"
+    expected = f"sha256={sign(body, ts)}"
+    if not hmac.compare_digest(signature_header or "", expected):
+        return False, "signature mismatch"
+    return True, "ok"
+
+
+def deliver_pending(limit: int = 50, *, only_ids: list[int] | None = None) -> int:
+    """Deliver queued webhooks. Safe to call from a background task.
+
+    `only_ids` restricts delivery to specific rows (the admin "Send test" button), so an interactive
+    request never waits on the whole backlog of other webhooks."""
     delivered = 0
     with SessionLocal() as db:
-        rows = db.scalars(
-            select(WebhookDelivery).where(WebhookDelivery.status == "pending").order_by(WebhookDelivery.id).limit(limit)
-        ).all()
+        q = select(WebhookDelivery).where(WebhookDelivery.status == "pending")
+        if only_ids is not None:
+            q = q.where(WebhookDelivery.id.in_(only_ids))
+        rows = db.scalars(q.order_by(WebhookDelivery.id).limit(limit)).all()
         for d in rows:
             hook = db.get(Webhook, d.webhook_id)
             if hook is None or not hook.is_active:
@@ -77,11 +105,13 @@ def deliver_pending(limit: int = 50) -> int:
                 continue
             body = json.dumps(d.payload, ensure_ascii=False).encode("utf-8")
             d.attempts += 1
+            ts = int(time.time())
             try:
                 r = httpx.post(
                     hook.url, content=body, timeout=5.0, follow_redirects=False,
                     headers={"Content-Type": "application/json", "X-Grievance-Event": d.event,
-                             "X-Grievance-Signature": f"sha256={sign(body)}"},
+                             "X-Grievance-Delivery": str(d.id), "X-Grievance-Timestamp": str(ts),
+                             "X-Grievance-Signature": f"sha256={sign(body, ts)}"},
                 )
                 d.response_code = r.status_code
                 if 200 <= r.status_code < 300:

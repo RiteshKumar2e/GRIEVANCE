@@ -11,7 +11,7 @@ interface Hooks {
 }
 interface Received {
   count: number;
-  items: { received_at: string; event: string | null; signature_valid: boolean; payload: Record<string, unknown> }[];
+  items: { received_at: string; event: string | null; signature_valid: boolean; verification?: string; payload: Record<string, unknown> }[];
 }
 
 // The backend posts to itself, so the receiver URL must be reachable from the server (port 8000 inside Docker too).
@@ -52,7 +52,7 @@ export default function AdminWebhooks() {
     <div>
       <PageHeader
         title="Webhooks"
-        subtitle="Send grievance events to n8n, Zapier or any HTTPS endpoint. Payloads carry IDs, status and routing, never complaint text or citizen identity, and are signed with HMAC-SHA256 in the X-Grievance-Signature header."
+        subtitle="Send grievance events to n8n, Zapier or any HTTPS endpoint. Payloads carry IDs, status and routing, never complaint text or citizen identity, and are signed with a timestamped HMAC-SHA256 in the X-Grievance-Signature header."
         actions={<Button variant="secondary" onClick={() => deliver.mutate()} loading={deliver.isPending}>Deliver pending now</Button>}
       />
       <div className="grid gap-6 xl:grid-cols-[380px_1fr]">
@@ -85,7 +85,7 @@ export default function AdminWebhooks() {
             <ol className="list-decimal space-y-2 pl-5 text-[13px] leading-relaxed text-ink-soft">
               <li>Create a workflow that starts with a Webhook (n8n) or Catch Hook (Zapier) trigger and copy its URL here.</li>
               <li>Press <em>Send test event</em>. The workflow receives a signed <code className="font-mono">webhook.test</code> event.</li>
-              <li>To verify the sender, compute HMAC-SHA256 of the raw body with WEBHOOK_SIGNING_SECRET and compare it with the X-Grievance-Signature header.</li>
+              <li>To verify the sender, compute HMAC-SHA256 of <code>&lt;X-Grievance-Timestamp&gt;.&lt;raw body&gt;</code> with WEBHOOK_SIGNING_SECRET and compare it with the X-Grievance-Signature header. Reject timestamps more than five minutes old (replay protection) and ignore an X-Grievance-Delivery id you have already processed.</li>
               <li>Route on the <code className="font-mono">event</code> field, for example send an SMS on grievance.escalated.</li>
             </ol>
           </Card>
@@ -138,7 +138,7 @@ export default function AdminWebhooks() {
                 <li key={i} className="py-2.5">
                   <div className="flex flex-wrap items-center gap-2 text-[12px]">
                     <span className="font-mono font-semibold text-ink">{r.event ?? "unknown"}</span>
-                    <Badge tone={r.signature_valid ? "good" : "critical"}>{r.signature_valid ? "signature valid" : "signature invalid"}</Badge>
+                    <Badge tone={r.signature_valid ? "good" : "critical"}>{r.signature_valid ? "signature valid" : `signature invalid${r.verification ? `: ${r.verification}` : ""}`}</Badge>
                     <span className="text-ink-muted">{fmtDate(r.received_at)}</span>
                   </div>
                   <pre className="mt-1.5 max-h-32 overflow-auto whitespace-pre-wrap break-words rounded-md border border-line bg-canvas p-2 font-mono text-[11px]">{JSON.stringify(r.payload, null, 2)}</pre>
