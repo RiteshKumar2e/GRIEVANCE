@@ -74,7 +74,7 @@ export function SiteFooter({ compact = false }: { compact?: boolean }) {
   return (
     <footer className="bg-navy text-[#C9D1DB]">
       <div className="mx-auto max-w-6xl px-4 pb-8 pt-14 sm:px-6">
-        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.6fr_1fr_1fr_1fr] lg:gap-12">
+        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1fr_1fr] lg:gap-10">
           {/* Brand */}
           <div className="sm:col-span-2 lg:col-span-1">
             <Link
@@ -90,7 +90,8 @@ export function SiteFooter({ compact = false }: { compact?: boolean }) {
             <p className="mt-4 max-w-sm text-[14px] leading-relaxed">
               Report civic issues in English, हिंदी or मराठी, and follow every step until they are resolved. Sensitive cases are always reviewed by people.
             </p>
-            <ul className="mt-6 flex gap-2" aria-label="Find us online">
+            <p className="mt-3 text-[13px] text-[#8FA0B3]">{contactEmail}</p>
+            <ul className="mt-5 flex gap-2" aria-label="Find us online">
               {social.map((s) => (
                 <li key={s.label}>
                   <a
@@ -114,11 +115,16 @@ export function SiteFooter({ compact = false }: { compact?: boolean }) {
             <li><Link to="/" state={{ section: "faq" }} className={FOOT_LINK}>FAQ</Link></li>
           </FooterColumn>
 
+          <FooterColumn title="Account">
+            <li><Link to="/login" className={FOOT_LINK}>Sign in</Link></li>
+            <li><Link to="/register" className={FOOT_LINK}>Create an account</Link></li>
+            <li><Link to="/citizen/new" className={FOOT_LINK}>Submit a grievance</Link></li>
+          </FooterColumn>
+
           <FooterColumn title="Support">
             <li><Link to="/help" className={FOOT_LINK}>Help centre</Link></li>
             <li><Link to="/citizen/track" className={FOOT_LINK}>Track a complaint</Link></li>
             <li><a href={`mailto:${contactEmail}`} className={FOOT_LINK}>Contact us</a></li>
-            <li className="break-all text-[13px] text-[#8FA0B3]">{contactEmail}</li>
           </FooterColumn>
 
           <FooterColumn title="Legal">
