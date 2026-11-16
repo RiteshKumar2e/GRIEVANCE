@@ -14,7 +14,7 @@ control wherever the risk is high.
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16%20%2B%20pgvector-4169E1?logo=postgresql&logoColor=white)
 ![Langfuse](https://img.shields.io/badge/Tracing-Langfuse%20(OTLP)-0A0A0A)
-![Tests](https://img.shields.io/badge/tests-121%20backend%20%C2%B7%2010%20frontend-2E7D32)
+![Tests](https://img.shields.io/badge/tests-133%20backend%20%C2%B7%2013%20frontend-2E7D32)
 
 **HackFusion 4.0 · Agentic AI Track**
 
@@ -89,7 +89,7 @@ routine backend work, while sending anything sensitive or uncertain to a person.
 | **1. Conversational intake** — text and voice in Marathi, Hindi, English; structured draft | A chat assistant asks for missing facts (what, where, since when) in the citizen's language and produces a structured draft: category, department, ward, urgency, SLA and summary. Voice uses server-side Whisper when installed and the browser's speech recognition otherwise; the transcript is always editable. Nothing is filed until the citizen explicitly confirms. | `agents/conversation.py`, `agents/intake.py` |
 | **2. Safety and policy enforcement** — Category Master is the source of truth; sensitive cases never auto-closed | A deterministic policy gate reads the Category Master for department, SLA, sensitivity, identity hiding and confidence threshold. Sensitive, low-confidence, prompt-injection and sensitive-keyword cases go to human review. The lifecycle service refuses any attempt by `AI_SYSTEM` to close a sensitive case, and there is no rejection status at all. | `agents/policy.py`, `services/grievances.py` |
 | **3. Case memory (RAG)** | Multilingual embeddings (`paraphrase-multilingual-MiniLM-L12-v2`) and pgvector cosine search retrieve the most similar resolved cases, widening from category to department to all. Officers see them as evidence with source IDs and similarity scores. | `agents/rag.py` |
-| **4. Duplicate detection and incident grouping** — semantic, geographic, time; no silent drops | Score = 0.55 semantic + 0.20 distance + 0.15 time + 0.10 category. Matches are *linked*, never merged: every report keeps its own ID, status, notifications and audit trail, and officers can unlink a wrong match. Works across languages. | `agents/duplicate.py` |
+| **4. Duplicate detection and incident grouping** — semantic, geographic, time; no silent drops | Score = 0.55 semantic + 0.20 distance + 0.15 time + 0.10 category. Matches are *linked*, never merged: every report keeps its own ID, status, notifications and audit trail, and officers can unlink a wrong match. Works across languages with the multilingual embedding model (17 of 23 cross-language pairs in the [offline evaluation](#offline-evaluation)); the lightweight hashing fallback matches same-language reports only. | `agents/duplicate.py` |
 | **5. Predictive intelligence** — SLA breach and recurrence, before the delay | Predicts resolution time and breach probability from historical resolution times and current department load, warns at 75% of the SLA or on high risk, escalates breaches, and surfaces recurring category-and-ward hotspots and department bottlenecks. | `agents/predictive.py` |
 | **6. Real-world action** — DB updates, department assignment, n8n/Zapier webhooks | Assigns the department and the least-loaded ward officer, updates status, notifies people, and sends HMAC-signed webhooks compatible with n8n and Zapier. A built-in mock receiver demonstrates delivery without external services. | `agents/actions.py`, `services/webhooks.py` |
 | **Observability** — Langfuse live tracing; inspectable reasoning | Every workflow is exported to Langfuse over OpenTelemetry in real time, with typed observations (agent, generation, guardrail, retriever, tool), model and token usage, sessions per grievance and a structured decision trail at every step. | `services/tracing.py` |
@@ -99,7 +99,7 @@ routine backend work, while sending anything sensitive or uncertain to a person.
 | Criterion | Evidence |
 | --- | --- |
 | Real-world problem understanding (20%) | Grounded in 1.23M real BBMP grievances; covers the full lifecycle including disputes, reopening and escalation |
-| Technical quality and working agentic implementation (20%) | Six agents behind one orchestrator, PostgreSQL + pgvector, 121 backend and 10 frontend tests |
+| Technical quality and working agentic implementation (20%) | Six agents behind one orchestrator, PostgreSQL + pgvector, 133 backend and 13 frontend tests, and an [offline evaluation suite](#offline-evaluation) with published results |
 | Innovation and appropriate AI use (15%) | LLMs are advisory; a rule-based policy gate and human review decide; cross-language duplicate linking |
 | Feasibility and integration potential (15%) | Docker deployment, signed webhooks for n8n/Zapier, dataset importers for the official HackFusion files |
 | Security, privacy and responsible AI (10%) | Role and object-level access control, identity hiding, PII redaction, full audit log, no auto-closure of sensitive cases, SSRF-safe webhooks |
@@ -161,7 +161,7 @@ architecture differs by role, and the backend enforces each role's scope on ever
 | Role | Sidebar | Scope enforced by the API |
 | --- | --- | --- |
 | **Citizen** | My Dashboard · My Grievances · File a Grievance · Track Complaint · Notifications · My Profile · Help & Support | Only their own grievances |
-| **Grievance Officer** | Overview · Assigned Cases · All Grievances · Review Queue · Escalations · SLA Monitoring · Duplicate Incidents · Reports & Analytics | Their assigned cases and their department; sensitive cases only when cleared |
+| **Grievance Officer** | Overview · Assigned Cases · All Grievances · Review Queue · Escalations · SLA Monitoring · Duplicate Incidents · Reports & Analytics | Their assigned cases and their department; sensitive cases only when cleared; status changes only on cases assigned to them |
 | **Department Admin** | Department Overview · Department Grievances · Case Distribution · Assignment Management · Pending Approvals · Officers & Team · SLA Performance · Reports & Analytics | Every grievance and officer of their own department only |
 | **System Admin** | Platform Overview · User Management · Departments · Category Master · Policy & Rules · SLA Configuration · Grievance Management · Audit Logs · AI & RAG Monitoring · Integrations & Webhooks · System Settings | The whole platform |
 
@@ -291,7 +291,7 @@ All endpoints are under `/api/v1`. Interactive documentation is served at **`/ap
 
 | Method | Path | Auth | Purpose |
 | --- | --- | --- | --- |
-| POST | `/mock/webhook-receiver` | none | **Mock n8n/Zapier "Catch Hook".** Accepts webhook deliveries, verifies `X-Grievance-Signature` exactly as an n8n workflow would, and keeps the last 50 in memory |
+| POST | `/mock/webhook-receiver` | none | **Mock n8n/Zapier "Catch Hook".** Accepts webhook deliveries, verifies the timestamped `X-Grievance-Signature` exactly as an n8n workflow should (rejecting deliveries older than five minutes), and keeps the last 50 in memory |
 | GET | `/mock/webhook-receiver` | system admin | Lists received deliveries with `signature_valid` for each |
 | GET | `/public/traces/{token}` | none | Redacted, shareable view of one agent trace |
 | GET | `/meta/categories` · `/meta/departments` · `/meta/wards` · `/meta/status` | none | Category Master, department directory, wards and service status |
@@ -397,7 +397,9 @@ POST /api/v1/citizen/intake/eZ3SeRdA_6mL…/confirm
 POST <your webhook URL>
 Content-Type: application/json
 X-Grievance-Event: grievance.assigned
-X-Grievance-Signature: sha256=<HMAC-SHA256 of the raw body with WEBHOOK_SIGNING_SECRET>
+X-Grievance-Delivery: 42
+X-Grievance-Timestamp: 1794739795
+X-Grievance-Signature: sha256=<HMAC-SHA256 of "<X-Grievance-Timestamp>.<raw body>" with WEBHOOK_SIGNING_SECRET>
 
 {
   "event": "grievance.assigned",
@@ -410,6 +412,11 @@ X-Grievance-Signature: sha256=<HMAC-SHA256 of the raw body with WEBHOOK_SIGNING_
 Events: `grievance.created`, `grievance.assigned`, `grievance.review_required`, `grievance.status_changed`,
 `grievance.escalated`, `grievance.sla_at_risk`, `grievance.duplicate_linked`, `grievance.reopened`,
 `webhook.test`. Payloads never contain complaint text or citizen identity.
+
+To verify a delivery, compute the HMAC over the timestamp, a full stop and the raw body, compare it with
+`X-Grievance-Signature` in constant time, and reject timestamps more than five minutes from your clock (replay
+protection). `X-Grievance-Delivery` is unique per delivery; ignore one you have already processed, because failed
+deliveries are retried up to three times. `app.services.webhooks.verify` is a reference implementation.
 
 ---
 
@@ -479,9 +486,10 @@ tagged `OFFICIAL` and never silently overwrite synthetic records.
 - **Human oversight.** Sensitive categories (harassment, child safety, corruption), low confidence, instruction-like text and sensitive keywords all route to human review. Only cleared officers and the department's administrator see sensitive cases.
 - **Hard limits in code.** The AI cannot close sensitive grievances, release a case from review or reject a grievance (there is no rejected status), and makes no liability findings. Each rule is covered by tests.
 - **Role-based access control.** Enforced on the backend for every request: object-level checks for grievances, department scoping for officers and department administrators, field-level rules for profile edits. A department administrator cannot read or manage another department.
-- **Untrusted input.** Complaint text is placed only inside delimited data blocks in the model's user turn, never in instructions; model output is schema-validated and cross-checked.
+- **Untrusted input.** Complaint text is placed only inside delimited data blocks in the model's user turn, never in instructions; model output is schema-validated and cross-checked. Instruction-like text in English, Hindi, Marathi or Hinglish sends the complaint to human review. If a citizen edits the draft before confirming, the sensitive-content and instruction checks run again on the text actually filed. Intake classification is the only place a language model is called.
 - **Audit.** Every AI action writes an `AI_SYSTEM` audit event with provider, model, confidence, explanation, policy references and trace ID. Assignments, approvals, profile, password, user and configuration changes are audited too.
-- **Privacy.** Identity masking for officers, full identity hiding for sensitive categories, PII redaction in traces and shared links, voice recordings deleted after transcription, and consent-based anonymous analytics with no cookies.
+- **Privacy.** Identity masking for officers, full identity hiding for sensitive categories (and for sensitive content filed under another category), phone numbers, e-mail addresses and ID-like numbers removed before text is sent to an external language model, PII redaction in traces and shared links, voice recordings deleted after transcription, and consent-based anonymous analytics with no cookies.
+- **Webhooks.** Destinations are checked against server-side request forgery when registered and before each delivery; signatures include a timestamp to stop replays; the production server refuses to start with the default signing secret.
 - **Application security.** JWT authentication, bcrypt, input validation, rate limits, a registration honeypot, daily submission caps, security headers, a strict Content-Security-Policy, optional HTTPS redirect and HSTS, and secrets kept only in `backend/.env`.
 
 ## Accessibility and inclusion
@@ -489,15 +497,17 @@ tagged `OFFICIAL` and never silently overwrite synthetic records.
 Marathi, Hindi and English throughout the citizen journey. Voice input with an editable transcript, and
 read-aloud of drafts and grievances in the citizen's language. Keyboard navigation, visible focus states, skip
 links, labelled controls, screen-reader announcements, and statuses conveyed in text rather than colour alone.
-Responsive layouts for mobile, tablet and desktop, and reduced-motion support.
+Responsive layouts for mobile, tablet and desktop, and reduced-motion support. Every chart has a screen-reader
+data table, wide tables that scroll sideways can be reached and scrolled with the keyboard, and form fields have a
+border contrast of at least 3:1.
 
 ---
 
 ## Testing
 
 ```bash
-cd backend  && python -m pytest -q                                               # 121 tests
-cd frontend && npm run lint && npm run typecheck && npm test && npm run build    # 10 tests
+cd backend  && python -m pytest -q                                               # 133 tests
+cd frontend && npm run lint && npm run typecheck && npm test && npm run build    # 13 tests
 ```
 
 Backend tests run on a temporary SQLite database with no model keys (fallback mode). They cover the mandated
@@ -506,8 +516,37 @@ review, duplicates preserving records, RAG relevance, SLA warnings, dispute and 
 audit events and missing-credential fallback — plus role-based access for all four roles, department isolation,
 profile field permissions, password change, notification preferences, officer approval, the OTLP trace export,
 webhook signatures, SSRF blocking of webhook destinations, re-checking safety signals when a citizen edits the
-draft before confirming, Hindi, Marathi and Hinglish prompt-injection detection, the BBMP importer and redaction,
-and security headers.
+draft before confirming, Hindi, Marathi and Hinglish prompt-injection detection, timestamped webhook signatures
+and replay rejection, status changes limited to the assigned officer, PII removal before the language-model call,
+voice-transcription input checks, reassignment, the BBMP importer and redaction, and security headers.
+
+### Offline evaluation
+
+```bash
+cd backend
+python -m evals.run                                    # hashing embedder, no model download
+python -m evals.run --embedder sentence-transformers   # multilingual model (requirements-ml.txt)
+```
+
+Each run seeds a throw-away database, disables language-model calls (so results are reproducible) and writes
+`backend/evals/results/<embedder>.json` and `.md`. The evaluation cases are written by the project author
+(52 intake complaints, 23 injection cases, 31 duplicate reports); none are real citizen complaints. Datasets,
+definitions and limitations: [`backend/evals/README.md`](backend/evals/README.md).
+
+| Measure | Hashing fallback | Multilingual model |
+| --- | --- | --- |
+| Intake category accuracy, rule classifier (n = 52) | 0.885 | 0.865 |
+| Sensitive complaints sent to human review (n = 7) | 7/7 | 7/7 |
+| Prompt-injection guard: precision / recall (13 attacks, 10 benign) | 1.00 / 0.69 | 1.00 / 0.69 |
+| Duplicate detection: precision / recall / F1 (72 pairs) | 0.80 / 0.15 / 0.25 | 1.00 / 0.78 / 0.875 |
+| Duplicates across languages: recall | 0/23 | 17/23 |
+| Case memory: precision@5 / MRR, all resolved cases | 0.77 / 0.85 | 0.86 / 0.90 |
+| SLA breach prediction, chronological backtest (216 cases): ECE / Brier / AUC | 0.027 / 0.190 / 0.649 | same |
+| — baseline, historical breach rate | 0.042 / 0.206 / 0.536 | |
+
+Every SLA prediction in the backtest uses only cases resolved before the complaint was filed (0 leakage
+violations, checked by `tests/test_evals.py`). The history is synthetic, so these numbers show that the
+estimator recovers the generator's distribution; they are not evidence of real-world accuracy.
 
 ## Configuration
 
@@ -538,6 +577,7 @@ GRIEVANCE/
 │   │   └── models/  core/  db/  schemas/
 │   ├── alembic/         migrations (PostgreSQL + pgvector, SQLite)
 │   ├── data/            synthetic/, schemas/, external/ (PROVENANCE.md)
+│   ├── evals/           offline evaluation: datasets, runner, published results
 │   ├── tests/
 │   └── Dockerfile, requirements.txt, requirements-ml.txt, .env.example
 ├── frontend/
@@ -555,6 +595,11 @@ GRIEVANCE/
 - Browser speech recognition (used when server-side Whisper is unavailable) works in Chrome and Edge; in Chrome the browser's speech service processes the audio.
 - Notifications are delivered in the app. SMS and WhatsApp are not built in, but can be connected through the signed webhooks.
 - data.gov.in CPGRAM statistics need a personal OGD API key.
+- The prompt-injection detector misses reworded attacks (4 of 13 in the evaluation). Routing, sensitivity and closure rules do not depend on the language model, so a missed attack can at most mislabel a category, which officers can correct.
+- Romanised Hindi is handled less well than Devanagari: the rule classifier got 1 of 3 test complaints right and detects the language as English.
+- Linking duplicates across languages needs the multilingual embedding model; the hashing fallback only links reports written in the same language.
+- Sign-in tokens last eight hours and cannot be revoked server-side before they expire (deactivating an account does take effect immediately).
+- `docker-compose.yml` publishes PostgreSQL on port 5432 with a development password; restrict or remove that mapping outside local development.
 
 ---
 
