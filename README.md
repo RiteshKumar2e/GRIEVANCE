@@ -4,9 +4,9 @@
 
 ### Agentic AI for intelligent, multilingual grievance redressal
 
-Report a civic problem in Marathi, Hindi or English, by text or voice. Six cooperating agents turn it into a
-confirmed grievance, route it, recall similar past cases, link duplicates, predict delays and act, with people in
-control wherever the risk is high.
+Report a civic problem in Marathi, Hindi or English, by text or voice. Six specialised agents, run in a fixed
+order by one orchestrator, turn it into a confirmed grievance, route it, recall similar past cases, link
+duplicates, predict delays and act, with people in control wherever the risk is high.
 
 ![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-backend-009688?logo=fastapi&logoColor=white)
@@ -43,19 +43,20 @@ control wherever the risk is high.
 2. [Overview](#overview)
 3. [How the problem statement is met](#how-the-problem-statement-is-met)
 4. [Architecture](#architecture)
-5. [Role-based dashboards](#role-based-dashboards)
-6. [Quick start](#quick-start)
-7. [Accounts and access](#accounts-and-access)
-8. [API reference](#api-reference)
-9. [Observability and the live trace](#observability-and-the-live-trace)
-10. [Data and provenance](#data-and-provenance)
-11. [Security, privacy and responsible AI](#security-privacy-and-responsible-ai)
-12. [Accessibility and inclusion](#accessibility-and-inclusion)
-13. [Testing](#testing)
-14. [Configuration](#configuration)
-15. [Project structure](#project-structure)
-16. [Known limitations](#known-limitations)
-17. [Author](#author)
+5. [Public website](#public-website)
+6. [Role-based dashboards](#role-based-dashboards)
+7. [Quick start](#quick-start)
+8. [Accounts and access](#accounts-and-access)
+9. [API reference](#api-reference)
+10. [Observability and the live trace](#observability-and-the-live-trace)
+11. [Data and provenance](#data-and-provenance)
+12. [Security, privacy and responsible AI](#security-privacy-and-responsible-ai)
+13. [Accessibility and inclusion](#accessibility-and-inclusion)
+14. [Testing](#testing) (including the [offline evaluation](#offline-evaluation))
+15. [Configuration](#configuration)
+16. [Project structure](#project-structure)
+17. [Known limitations](#known-limitations)
+18. [Author](#author)
 
 ---
 
@@ -86,11 +87,11 @@ routine backend work, while sending anything sensitive or uncertain to a person.
 
 | Required capability | What GRIEVANCE does | Code |
 | --- | --- | --- |
-| **1. Conversational intake** — text and voice in Marathi, Hindi, English; structured draft | A chat assistant asks for missing facts (what, where, since when) in the citizen's language and produces a structured draft: category, department, ward, urgency, SLA and summary. Voice uses server-side Whisper when installed and the browser's speech recognition otherwise; the transcript is always editable. Nothing is filed until the citizen explicitly confirms. | `agents/conversation.py`, `agents/intake.py` |
+| **1. Conversational intake** — text and voice in Marathi, Hindi, English; structured draft | A rule-based dialogue asks for missing facts (what, where, since when) in the citizen's language, then the intake agent (Groq or Gemini when configured, multilingual rules otherwise) produces a structured draft: category, department, ward, urgency, SLA and summary. Voice uses server-side Whisper when installed and the browser's speech recognition otherwise; the transcript is always editable. Nothing is filed until the citizen explicitly confirms. | `agents/conversation.py`, `agents/intake.py` |
 | **2. Safety and policy enforcement** — Category Master is the source of truth; sensitive cases never auto-closed | A deterministic policy gate reads the Category Master for department, SLA, sensitivity, identity hiding and confidence threshold. Sensitive, low-confidence, prompt-injection and sensitive-keyword cases go to human review. The lifecycle service refuses any attempt by `AI_SYSTEM` to close a sensitive case, and there is no rejection status at all. | `agents/policy.py`, `services/grievances.py` |
-| **3. Case memory (RAG)** | Multilingual embeddings (`paraphrase-multilingual-MiniLM-L12-v2`) and pgvector cosine search retrieve the most similar resolved cases, widening from category to department to all. Officers see them as evidence with source IDs and similarity scores. | `agents/rag.py` |
+| **3. Case memory (RAG)** | Multilingual embeddings (`paraphrase-multilingual-MiniLM-L12-v2`) and pgvector cosine search retrieve the most similar resolved cases, widening from category to department to all. Officers see them as evidence with source IDs and similarity scores. Measured precision@5: 0.86 with the multilingual model ([offline evaluation](#offline-evaluation)). | `agents/rag.py` |
 | **4. Duplicate detection and incident grouping** — semantic, geographic, time; no silent drops | Score = 0.55 semantic + 0.20 distance + 0.15 time + 0.10 category. Matches are *linked*, never merged: every report keeps its own ID, status, notifications and audit trail, and officers can unlink a wrong match. Works across languages with the multilingual embedding model (17 of 23 cross-language pairs in the [offline evaluation](#offline-evaluation)); the lightweight hashing fallback matches same-language reports only. | `agents/duplicate.py` |
-| **5. Predictive intelligence** — SLA breach and recurrence, before the delay | Predicts resolution time and breach probability from historical resolution times and current department load, warns at 75% of the SLA or on high risk, escalates breaches, and surfaces recurring category-and-ward hotspots and department bottlenecks. | `agents/predictive.py` |
+| **5. Predictive intelligence** — SLA breach and recurrence, before the delay | Predicts resolution time and breach probability from historical resolution times and current department load, warns at 75% of the SLA or on high risk, escalates breaches, and surfaces recurring category-and-ward hotspots and department bottlenecks. The estimator is empirical, not a trained model; a leakage-free chronological backtest gives AUC 0.65 against 0.54 for a base-rate baseline, on synthetic history ([offline evaluation](#offline-evaluation)). | `agents/predictive.py` |
 | **6. Real-world action** — DB updates, department assignment, n8n/Zapier webhooks | Assigns the department and the least-loaded ward officer, updates status, notifies people, and sends HMAC-signed webhooks compatible with n8n and Zapier. A built-in mock receiver demonstrates delivery without external services. | `agents/actions.py`, `services/webhooks.py` |
 | **Observability** — Langfuse live tracing; inspectable reasoning | Every workflow is exported to Langfuse over OpenTelemetry in real time, with typed observations (agent, generation, guardrail, retriever, tool), model and token usage, sessions per grievance and a structured decision trail at every step. | `services/tracing.py` |
 
@@ -151,6 +152,32 @@ flowchart TD
 enforces the safety rules.
 
 ---
+
+## Public website
+
+The home page (`frontend/src/pages/public/Landing.tsx`, copy in `landingCopy.ts`) is fully translated into
+English, Hindi and Marathi, and is organised around the logo's promise, **Speak · Track · Resolve**. Content
+that depends on the deployment is read live from the API: the list of issues comes from the Category Master,
+and voice-input and synthetic-data statements come from `/meta/status`. Every product image on the page is
+built from the real interface and labelled *Illustrative example*; no real record or statistic is shown.
+
+| Section | What it shows |
+| --- | --- |
+| Hero | Headline, *Submit a grievance* and *Track a complaint*, and a full-width status rail of one example grievance (Submitted → Assigned → In progress → Resolved), each step dated and marked with who acted |
+| Issues you can report | The live Category Master grouped by responsible department, with each issue's response time; confidential categories marked |
+| How it works | Three stages (Speak, Track, Resolve) and five steps, each labelled *You*, *Automatic* or *Officer* |
+| See it before you start | The assistant's real follow-up question and the draft a citizen confirms |
+| Behind the scenes | What the software does and where it stops; live voice-input status |
+| About | What citizens and officers can see; that the service is independent and, in this deployment, uses synthetic data |
+| Your language | The assistant's location question in all three scripts, with one-click language switching |
+| Handled with care | Sensitive complaints, identity masking, no automatic rejection, recordings not kept |
+| FAQ and closing | Common questions, then both actions again |
+
+Calls to action follow the user's role: visitors are sent to sign in and then returned to the intake page,
+citizens go straight to it, and staff go to their own dashboard. The navigation (Home, How it works, Services,
+About, FAQ, language selector, Sign in, Submit a grievance) collapses into a menu below 1280 px. During the
+redesign the page was checked in Chrome from 320 to 1920 px wide in all three languages, with no horizontal
+scrolling, and axe-core reported no WCAG 2.2 A/AA violations.
 
 ## Role-based dashboards
 
