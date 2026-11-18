@@ -254,6 +254,20 @@ npm install
 npm run dev                                                 # http://localhost:5173
 ```
 
+### Command-line tools
+
+Run from `backend/` (or prefix with `docker compose exec backend`).
+
+| Command | What it does |
+| --- | --- |
+| `python -m app.cli init [--no-demo-grievances]` | Migrate the database and load the synthetic datasets (idempotent) |
+| `python -m app.cli migrate` | Apply database migrations only |
+| `python -m app.cli import <kind> <file> [--official] [--dry-run] [--replace]` | Import `departments`, `categories`, `officers` or `grievance_history` from CSV or XLSX |
+| `python -m app.cli sla-scan` · `auto-close` | Run the SLA monitor or the auto-close job once |
+| `python -m app.cli reembed` | Recompute embeddings after changing `EMBEDDING_PROVIDER` |
+| `python -m app.cli external fetch` · `import` · `verify` · `status` · `fetch-ogd` | Download, import, checksum-verify and inspect the public reference datasets |
+| `python -m evals.run [--embedder sentence-transformers]` | Run the [offline evaluation](#offline-evaluation) |
+
 ---
 
 ## Accounts and access
@@ -289,7 +303,10 @@ All endpoints are under `/api/v1`. Interactive documentation is served at **`/ap
 | Method | Path | Purpose |
 | --- | --- | --- |
 | POST | `/citizen/intake/converse` | **Conversational intake**: one chat turn; returns a follow-up question or a draft |
+| POST | `/citizen/intake/analyze` | One-shot intake: a full description in, a structured draft out (no follow-up questions) |
 | POST | `/citizen/intake/transcribe` | Whisper speech-to-text (audio is not stored) |
+| GET | `/citizen/intake/{token}` | Reopen a draft (drafts expire after 24 hours) |
+| POST | `/citizen/intake/{token}/discard` | Discard a draft without filing it |
 | POST | `/citizen/intake/{token}/confirm` | **Explicit confirmation**: creates the grievance and runs the six-agent pipeline |
 | GET | `/citizen/grievances` · `/citizen/grievances/{id}` | Own grievances and full status history |
 | POST | `/citizen/grievances/{id}/confirm-resolution` · `/dispute` | Close with a rating, or dispute to reopen |
@@ -302,14 +319,16 @@ All endpoints are under `/api/v1`. Interactive documentation is served at **`/ap
 | GET | `/officer/grievances/{id}` | Case workspace: AI summary, policy decision, precedents, duplicates, SLA, audit |
 | POST | `/officer/grievances/{id}/review` · `/status` · `/notes` · `/reassign` · `/escalate` | Human decisions and backend actions (all audited) |
 | GET | `/officer/duplicates` | Linked incident groups with match evidence |
+| POST | `/officer/grievances/{id}/duplicates/{other_id}/unlink` | Remove a wrong duplicate link; both grievances are otherwise untouched |
 | GET | `/officer/reports` · `/officer/reports/export` | Scoped analytics and a CSV export with no citizen identity |
-| GET / PATCH | `/department/summary` · `/department/officers` | Department admin: team, capacity and ward coverage |
-| GET / POST / PATCH | `/admin/users` · `/admin/departments` · `/admin/categories` · `/admin/officers` | User, department and Category Master administration |
+| GET / PATCH | `/department/summary` · `/department/officers` · `/department/officers/{code}` | Department admin: team, capacity and ward coverage |
+| GET / POST / PATCH | `/admin/users` · `/admin/users/{id}` · `/admin/users/summary` · `/admin/departments` · `/admin/departments/{code}` · `/admin/categories` · `/admin/categories/{code}` · `/admin/officers` · `/admin/officers/{code}` | User, department, officer and Category Master administration (every change audited) |
 | GET | `/admin/settings` · `/admin/audit` | Read-only runtime settings (no secrets) and the audit log |
-| POST | `/admin/datasets/import` | Import the HackFusion datasets from CSV or XLSX (dry run first) |
-| GET / POST | `/admin/webhooks` · `/admin/webhooks/{id}/test` | Register n8n/Zapier webhooks and send a signed test event |
+| GET / POST | `/admin/datasets` · `/admin/datasets/import` | Import history, and import of the HackFusion datasets from CSV or XLSX (dry run first) |
+| GET / POST | `/admin/webhooks` · `/admin/webhooks/{id}/test` · `/admin/webhooks/deliver` | Register n8n/Zapier webhooks (destination checked against SSRF), send a signed test event, deliver queued events now |
+| PATCH / DELETE | `/admin/webhooks/{id}` | Enable, disable or delete a webhook (audited) |
 | POST | `/admin/jobs/sla-scan` · `/admin/jobs/auto-close` | Run the SLA monitor or auto-close on demand |
-| GET | `/analytics/*` | Platform analytics |
+| GET | `/analytics/overview` · `/trends` · `/categories` · `/departments` · `/sla` · `/recurrence` · `/bottlenecks` · `/agents` · `/pageviews` | Platform analytics (system admin): volumes, weekly trends, SLA performance, ward hotspots, department bottlenecks, agent activity and page-view counts |
 | GET | `/observability/traces` · `/observability/traces/{id}` | Agent traces with every step, input, output and decision trail |
 | POST / DELETE | `/observability/traces/{id}/share` | Create or revoke a redacted public link for a trace |
 | GET | `/observability/langfuse` · `/observability/errors` | Langfuse connection check and recent export errors |
@@ -322,6 +341,8 @@ All endpoints are under `/api/v1`. Interactive documentation is served at **`/ap
 | GET | `/mock/webhook-receiver` | system admin | Lists received deliveries with `signature_valid` for each |
 | GET | `/public/traces/{token}` | none | Redacted, shareable view of one agent trace |
 | GET | `/meta/categories` · `/meta/departments` · `/meta/wards` · `/meta/status` | none | Category Master, department directory, wards and service status |
+| POST | `/meta/pageview` | none | Anonymous page-view count, sent only after the visitor accepts analytics (no cookies, no identifiers) |
+| GET | `/health` (no `/api/v1` prefix) | none | Liveness check used by the Docker health check |
 | GET / POST | `/notifications` · `/notifications/{id}/read` · `/notifications/read-all` | any | In-app notifications |
 | GET | `/external/datasets` · `/external/bbmp/summary` · `/external/bbmp/records` · `/external/ogd/{key}` | staff | Imported real-world reference data (BBMP, data.gov.in) |
 
