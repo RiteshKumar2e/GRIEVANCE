@@ -607,10 +607,27 @@ estimator recovers the generator's distribution; they are not evidence of real-w
 | Speech and embeddings | `STT_PROVIDER`, `WHISPER_MODEL`, `EMBEDDING_PROVIDER`, `EMBEDDING_MODEL` |
 | Observability | `LANGFUSE_HOST`, `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY` |
 | Accounts | `BOOTSTRAP_ADMIN_EMAIL`, `BOOTSTRAP_ADMIN_PASSWORD`, `BOOTSTRAP_ADMIN_NAME`, `SEED_DEMO_USERS`, `DEMO_PASSWORD` |
-| Policy and limits | confidence, duplicate and SLA thresholds, `MAX_GRIEVANCES_PER_DAY`, `ENFORCE_HTTPS` |
+| Policy and limits | `DEFAULT_CONFIDENCE_THRESHOLD`, `DUPLICATE_THRESHOLD`, `DUPLICATE_WINDOW_DAYS`, `DUPLICATE_RADIUS_KM`, `SLA_WARNING_FRACTION`, `AUTO_CLOSE_AFTER_DAYS`, `SLA_SCAN_INTERVAL_SECONDS`, `MAX_GRIEVANCES_PER_DAY`, `MAX_DRAFTS_PER_DAY`, `MAX_UPLOAD_MB` |
+| Sessions and transport | `JWT_EXPIRE_MINUTES`, `ENFORCE_HTTPS`, `LLM_TIMEOUT_SECONDS` |
 | Integrations | `WEBHOOK_SIGNING_SECRET`, `WEBHOOK_ALLOWED_HOSTS`, `DATA_GOV_IN_API_KEY` |
 
 `frontend/.env` holds public values only: `VITE_API_BASE_URL`, `VITE_SITE_URL`, `VITE_SUPPORT_EMAIL`.
+
+Defaults that shape behaviour (from `backend/app/core/config.py`; the Category Master can override the
+confidence threshold per category):
+
+| Setting | Default | Effect |
+| --- | --- | --- |
+| `DEFAULT_CONFIDENCE_THRESHOLD` | 0.70 | Classification below this goes to human review |
+| `DUPLICATE_THRESHOLD` | 0.78 | Minimum combined score to link two reports (0.62 with the hashing embedder) |
+| `DUPLICATE_WINDOW_DAYS` · `DUPLICATE_RADIUS_KM` | 30 · 1.5 | Time and distance over which reports can be linked |
+| `SLA_WARNING_FRACTION` | 0.75 | Officers are warned when this share of the response time has passed |
+| `AUTO_CLOSE_AFTER_DAYS` | 7 | A resolved, non-sensitive case closes if the citizen does not respond (only where the category allows it) |
+| `SLA_SCAN_INTERVAL_SECONDS` | 300 | How often the SLA monitor and webhook delivery run (0 turns the loop off) |
+| `MAX_GRIEVANCES_PER_DAY` · `MAX_DRAFTS_PER_DAY` | 10 · 60 | Per-citizen daily limits |
+| `JWT_EXPIRE_MINUTES` | 480 | Sign-in lifetime |
+| `LLM_TIMEOUT_SECONDS` | 30 | Per-provider timeout before falling back to the next provider or the rules |
+| `EMBEDDING_PROVIDER` · `STT_PROVIDER` | `auto` · `auto` | Use the multilingual model and Whisper when installed, otherwise the hashing embedder and browser speech |
 
 ## Project structure
 
