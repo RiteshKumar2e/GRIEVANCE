@@ -267,6 +267,7 @@ Run from `backend/` (or prefix with `docker compose exec backend`).
 | `python -m app.cli reembed` | Recompute embeddings after changing `EMBEDDING_PROVIDER` |
 | `python -m app.cli external fetch` · `import` · `verify` · `status` · `fetch-ogd` | Download, import, checksum-verify and inspect the public reference datasets |
 | `python -m evals.run [--embedder sentence-transformers]` | Run the [offline evaluation](#offline-evaluation) |
+| `python scripts/generate_synthetic_data.py` | Regenerate the synthetic CSVs in `data/synthetic/` (fixed seed, so output is identical each run; every row is labelled `SYNTHETIC`) |
 
 ---
 
@@ -638,11 +639,14 @@ GRIEVANCE/
 │   │   ├── agents/      intake, conversation, policy, rag, duplicate, predictive, actions, orchestrator
 │   │   ├── api/         auth, meta, citizen, officer, department, admin, analytics, observability, external, mock
 │   │   ├── llm/         Groq → Gemini → rules client, embeddings, Whisper
-│   │   ├── services/    lifecycle, audit, notifications, webhooks, tracing, importer, external data, seed
-│   │   └── models/  core/  db/  schemas/
+│   │   ├── services/    lifecycle, audit, notifications, webhooks, tracing, importer, external data, geo, seed
+│   │   ├── core/        settings, auth, SSRF guard, PII redaction, rate limits, errors
+│   │   ├── models/  db/  schemas/
+│   │   └── cli.py       command-line tools (see Quick start)
 │   ├── alembic/         migrations (PostgreSQL + pgvector, SQLite)
 │   ├── data/            synthetic/, schemas/, external/ (PROVENANCE.md)
 │   ├── evals/           offline evaluation: datasets, runner, published results
+│   ├── scripts/         generate_synthetic_data.py (regenerates data/synthetic/)
 │   ├── tests/
 │   └── Dockerfile, requirements.txt, requirements-ml.txt, .env.example
 ├── frontend/
